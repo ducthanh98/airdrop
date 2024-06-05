@@ -48,7 +48,10 @@ func connectSocket(token string) {
 	for {
 		_, payload, err := c.ReadMessage()
 		if err != nil {
-			log.Println("read:", err)
+			log.Println("Read message error:", err)
+			time.Sleep(1 * time.Minute)
+			log.Println("Error. Reconnecting after a minute")
+			go connectSocket(token)
 			return
 		}
 		var msg *request.WsMessage
