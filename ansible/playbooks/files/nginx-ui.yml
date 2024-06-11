@@ -1,0 +1,27 @@
+version: '3'
+services:
+  nginx-ui:
+    image: 'jc21/nginx-proxy-manager:latest'
+    restart: always
+    ports:
+      - '80:80'
+      - '81:81'
+      - '443:443'
+    volumes:
+      - nginx-proxy-data:/data
+      - letsencrypt-data:/etc/letsencrypt
+    networks:
+      - internal
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 20
+        window: 120s
+
+volumes:
+    nginx-proxy-data:
+    letsencrypt-data:
+
+networks:
+  internal:

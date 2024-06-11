@@ -1,0 +1,31 @@
+version: "3"
+services:
+  mssql:
+    image: "mcr.microsoft.com/mssql/server:2017-latest"
+    container_name: mssqlserver         # tên container
+    secrets: 
+      - mssql-password
+    environment:
+      ACCEPT_EULA: 'Y'
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 20
+        window: 120s
+    volumes:
+      - mssql-data:/var/opt/mssql/data # thư mục lưu DB
+    networks:
+      - internal
+    entrypoint: "/bin/sh -c 'export MSSQL_SA_PASSWORD=$$(cat /var/run/secrets/mssql-password) && /opt/mssql/bin/nonroot_msg.sh && /opt/mssql/bin/sqlservr'"
+
+networks:
+  internal:
+    external: true
+
+volumes:
+    mssql-data:
+
+secrets:
+  mssql-password:
+    external: true

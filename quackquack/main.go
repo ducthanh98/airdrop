@@ -20,7 +20,7 @@ func main() {
 	tokens := (viper.Get("auth.tokens")).([]interface{})
 	for _, token := range tokens {
 		var duckApi = request.NewDuckApi(token.(string))
-//		go hatchDuck(duckApi)
+		//		go hatchDuck(duckApi)
 		go collectEgg(duckApi)
 		go collectGoldenDuck(duckApi)
 
@@ -36,13 +36,12 @@ func collectEgg(duckApi *request.DuckApi) {
 			log.Errorln("Error", err)
 			continue
 		}
-		log.Infoln(listRes)
 		nests := listRes.Data.Nest
-		ranNest := rand.Intn(len(nests) )
+		ranNest := rand.Intn(len(nests))
 		nest := nests[ranNest]
 
 		ducks := listRes.Data.Duck
-		randDuck := rand.Intn(len(ducks) )
+		randDuck := rand.Intn(len(ducks))
 
 		duckApi.LayEgg(nest.ID, ducks[randDuck].ID)
 

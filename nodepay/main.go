@@ -123,7 +123,7 @@ func pingNetworkDevice(token, ip string) {
 			SetAuthToken(token).
 			Get(fmt.Sprintf("%v/network/device-network?ip=%v", constant.BASE_URL, ip))
 		if err != nil {
-			panic("Can't ping device")
+			log.Println("Can't ping device")
 		}
 
 		//fmt.Println("res", res)
