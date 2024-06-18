@@ -6,11 +6,10 @@ import (
 	"github.com/go-resty/resty/v2"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	"github.com/spf13/cast"
 	"github.com/spf13/viper"
-	"grass/constant"
-	"grass/request"
 	"log"
+	"nodepay/constant"
+	"nodepay/request"
 	"time"
 )
 
@@ -23,18 +22,29 @@ func main() {
 
 	token := viper.GetString("data.token")
 
-	go pingNetworkDevice(token)
+	client := resty.New()
+	client.SetProxy("https://51.79.156.14:80")
+
+	var publicIp *request.GetIPResponse
+
+	_, err = client.R().
+		SetResult(&publicIp).
+		Get("https://api.ipify.org?format=json")
+	if err != nil {
+		panic("Can't get public ip")
+	}
+
+	go pingNetworkDevice(token, publicIp.IP)
 	go connectSocket(token)
 	select {}
 
 }
 
 func connectSocket(token string) {
-
 	c, resp, err := websocket.DefaultDialer.Dial(constant.BASE_WSS, nil)
 	if err != nil {
 		log.Printf("handshake failed with status %d", resp.StatusCode)
-		log.Printf("dial:", err)
+		log.Fatal("dial:", err)
 	}
 	defer c.Close()
 	for {
@@ -53,8 +63,8 @@ func connectSocket(token string) {
 			sendAuth(msg, token, c)
 		} else if msg.Action == "PONG" {
 			SendPong(msg, c)
-			time.Sleep(constant.PING_INTERVAL * time.Minute)
-			sendPing(c)
+			time.Sleep(constant.PING_INTERVAL * time.Millisecond)
+			SendPing(msg, c)
 		}
 	}
 }
@@ -72,13 +82,10 @@ func SendPong(msg *request.WsMessage, c *websocket.Conn) {
 	}
 }
 
-func sendPing(c *websocket.Conn) {
-
-	tmp := request.PingRequest{
-		ID:      uuid.New().String(),
-		Action:  "PING",
-		Version: "1.0.0",
-		Data:    struct{}{},
+func SendPing(msg *request.WsMessage, c *websocket.Conn) {
+	tmp := request.PingMessage{
+		ID:     msg.ID,
+		Action: "PING",
 	}
 	body, _ := json.Marshal(tmp)
 	err := c.WriteMessage(websocket.TextMessage, body)
@@ -89,20 +96,17 @@ func sendPing(c *websocket.Conn) {
 }
 
 func sendAuth(msg *request.WsMessage, token string, c *websocket.Conn) {
-	deviceId := viper.GetString("data.deviceId")
-	userId := viper.GetString("data.userId")
-
-	tmp := request.AuthRequest{
+	tmp := request.AuthMessage{
 		ID:           msg.ID,
+		Action:       "PING",
+		UserID:       "1245581001883648000",
+		BrowserID:    uuid.New().String(),
+		UserAgent:    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+		Timestamp:    time.Now().Format("20060102150405"),
+		DeviceType:   "extension",
+		Version:      "2.1.0",
+		Token:        token,
 		OriginAction: "AUTH",
-		Result: request.AuthData{
-			BrowserID:  deviceId,
-			UserID:     userId,
-			UserAgent:  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-			Timestamp:  cast.ToInt(time.Now().Format("20060102150405")),
-			DeviceType: "extension",
-			Version:    "4.0.3",
-		},
 	}
 	body, _ := json.Marshal(tmp)
 	err := c.WriteMessage(websocket.TextMessage, body)
@@ -110,23 +114,21 @@ func sendAuth(msg *request.WsMessage, token string, c *websocket.Conn) {
 		log.Println("write:", err)
 		return
 	}
-
-	sendPing(c)
 }
 
-func pingNetworkDevice(token string) {
+func pingNetworkDevice(token, ip string) {
 	client := resty.New()
 
 	for {
 
-		res, err := client.R().
+		_, err := client.R().
 			SetAuthToken(token).
-			Get(fmt.Sprintf("%v/data/client-ip", constant.BASE_URL))
+			Get(fmt.Sprintf("%v/network/device-network?ip=%v", constant.BASE_URL, ip))
 		if err != nil {
 			log.Println("Can't ping device")
 		}
 
-		fmt.Println("res", res)
+		//fmt.Println("res", res)
 
 		time.Sleep(1 * time.Second)
 	}
