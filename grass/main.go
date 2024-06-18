@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"github.com/go-resty/resty/v2"
@@ -30,11 +31,18 @@ func main() {
 }
 
 func connectSocket(token string) {
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: true, // This skips SSL verification
+	}
 
-	c, resp, err := websocket.DefaultDialer.Dial(constant.BASE_WSS, nil)
+	// Create a WebSocket dialer with the custom TLS configuration
+	dialer := websocket.Dialer{
+		TLSClientConfig: tlsConfig,
+	}
+	c, resp, err := dialer.Dial(constant.BASE_WSS, nil)
 	if err != nil {
-		log.Printf("handshake failed with status %d", resp.StatusCode)
-		log.Printf("dial:", err)
+		fmt.Printf("handshake failed with status", resp)
+		fmt.Printf("dial:", err)
 	}
 	defer c.Close()
 	for {
