@@ -21,8 +21,8 @@ func main() {
 	for _, token := range tokens {
 		var duckApi = request.NewDuckApi(token.(string))
 		go hatchDuck(duckApi)
-		//go collectEgg(duckApi)
-		//go collectGoldenDuck(duckApi)
+		go collectEgg(duckApi)
+		go collectGoldenDuck(duckApi)
 
 	}
 	select {}
