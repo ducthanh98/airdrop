@@ -1,29 +1,11 @@
-# Stage 1: Build the Go application
-FROM golang:1.22.3 AS builder
+FROM node:12.22.12-alpine
 
-# Set the Current Working Directory inside the container
 WORKDIR /app
-ENV CGO_ENABLED=0
 
-# Copy go mod and sum files
-COPY go.mod go.sum ./
-# Download all dependencies. Dependencies will be cached if the go.mod and go.sum files are not changed
-RUN go mod download
+COPY package*.json ./
 
-# Copy the source from the current directory to the Working Directory inside the container
-COPY . .
+RUN npm install
 
-# Build the Go app
-RUN go build -o main .
+COPY main.js .
 
-# Stage 2: Create a smaller image for running the application
-FROM alpine:latest
-
-# Set the Current Working Directory inside the container
-WORKDIR /root/
-
-# Copy the Pre-built binary file from the previous stage
-COPY --from=builder /app/main .
-
-# Command to run the executable
-CMD ["./main"]
+CMD [ "node", "main.js" ]
