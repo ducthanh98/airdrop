@@ -21,8 +21,8 @@ func main() {
 	for _, token := range tokens {
 		var duckApi = request.NewDuckApi(token.(string))
 		go hatchDuck(duckApi)
-		go collectEgg(duckApi)
-		go collectGoldenDuck(duckApi)
+		//go collectEgg(duckApi)
+		//go collectGoldenDuck(duckApi)
 
 	}
 	select {}
@@ -54,8 +54,8 @@ func collectEgg(duckApi *request.DuckApi) {
 func hatchDuck(duckApi *request.DuckApi) {
 	maxDuckRes, _ := duckApi.GetMaxDuck()
 	maxDuck := maxDuckRes.Data.MaxDuck
-	if maxDuck < 10 {
-		maxDuck = 10
+	if maxDuck < 15 {
+		maxDuck = 15
 	}
 
 	for {
@@ -65,13 +65,16 @@ func hatchDuck(duckApi *request.DuckApi) {
 		randDuck := rand.Intn(len(ducks) - 1)
 
 		res, _ := duckApi.LayEgg(nest.ID, ducks[randDuck].ID)
-		var removedDuck = ducks[0]
+		log.Infoln("LayEgg Egg nestId", nest.ID, res)
+		var removedDuckId = 0
+		var removedRare = 0
 		if len(ducks) >= maxDuck {
 			sort.Slice(ducks, func(i, j int) bool {
-				return ducks[i].TotalRare < ducks[i].TotalRare
+				return ducks[i].TotalRare < ducks[j].TotalRare
 			})
+			removedDuckId = ducks[0].ID
+			removedRare = ducks[0].TotalRare
 			duckApi.RemoveDuck([]int{ducks[0].ID})
-			log.Infoln("Collect Egg nestId", nest.ID, res)
 
 		}
 
@@ -80,7 +83,7 @@ func hatchDuck(duckApi *request.DuckApi) {
 		time.Sleep(5 * time.Second)
 		res, _ = duckApi.CollectDuck(nest.ID)
 
-		log.Infoln("Remove duck id: ", removedDuck.ID, "rare", removedDuck.TotalRare, " Received new duck", nest.ID, res)
+		log.Infoln("Remove duck id: ", removedDuckId, "rare", removedRare, " Received new duck", nest.ID, res)
 		time.Sleep(5 * time.Second)
 
 	}
