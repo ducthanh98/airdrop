@@ -54,6 +54,9 @@ func collectEgg(duckApi *request.DuckApi) {
 func hatchDuck(duckApi *request.DuckApi) {
 	maxDuckRes, _ := duckApi.GetMaxDuck()
 	maxDuck := maxDuckRes.Data.MaxDuck
+	if maxDuck < 10 {
+		maxDuck = 10
+	}
 
 	for {
 		listRes, _ := duckApi.GetList()
