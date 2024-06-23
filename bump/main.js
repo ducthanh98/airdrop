@@ -2,7 +2,6 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const cliProgress = require('cli-progress');
-const readline = require('readline');
 
 const idsFilePath = path.join(__dirname, 'query.txt');
 const telegramIds = fs.readFileSync(idsFilePath, 'utf8').trim().split('\n');
@@ -24,50 +23,126 @@ const authHeaders = {
     'User-Agent': 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36'
 };
 
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+const createQueue = () => {
+    const tasks = [];
+    let pendingPromise = false;
+
+    return {
+        addTask: (task) => {
+            tasks.push(task);
+            if (!pendingPromise) {
+                pendingPromise = true;
+                processQueue();
+            }
+        }
+    };
+
+    async function processQueue() {
+        while (tasks.length > 0) {
+            const task = tasks.shift();
+            await task();
+        }
+        pendingPromise = false;
+    }
+};
+
+const messageQueue = createQueue();
+
+
+const finishFarmingIfNeeded = async (farmingData, farmingHeaders, progress) => {
+    const currentTime = Math.floor(Date.now() / 1000);
+    if (farmingData.session.status === 'inProgress' && currentTime > farmingData.session.moon_time) {
+        try {
+            const finishUrl = 'https://api.mmbump.pro/v1/farming/finish';
+            const finishPayload = { tapCount: 0 };
+            await axios.post(finishUrl, finishPayload, { headers: farmingHeaders });
+            messageQueue.addTask(() => progress.update({ status: 'Đã hoàn thành farming' }));
+
+            const farmingStartUrl = 'https://api.mmbump.pro/v1/farming/start';
+            const farmingStartPayload = { status: 'inProgress' };
+            await axios.post(farmingStartUrl, farmingStartPayload, { headers: farmingHeaders });
+            messageQueue.addTask(() => progress.update({ status: 'Bắt đầu farming...' }));
+        } catch (error) {
+            messageQueue.addTask(() => progress.update({ status: `Lỗi khi hoàn thành farming: ${error.message}` }));
+        }
+    } else {
+        messageQueue.addTask(() => progress.update({ status: 'Đang trong trạng thái farming' }));
+    }
+};
 
 const xuly = async (telegramId, progress) => {
     const authPayload = `telegram_id=${telegramId}`;
 
+    let hash = null;
+    let attempt = 1;
+    while (!hash) {
+        try {
+            const authResponse = await axios.post(authUrl, authPayload, { headers: authHeaders });
+            await sleep(10000); 
+            if (authResponse.status === 200 && authResponse.data) {
+                hash = authResponse.data.hash;
+                messageQueue.addTask(() => progress.update({ status: `Xác thực thành công` }));
+            } else {
+                throw new Error('Không thể xác thực');
+            }
+        } catch (error) {
+            messageQueue.addTask(() => progress.update({ status: `Lần thử ${attempt}: Lỗi khi xác thực: ${error.message}` }));
+            await sleep(1000); 
+        }
+        attempt++;
+    }
+
+    if (!hash) {
+        messageQueue.addTask(() => progress.update({ status: 'Không thể xác thực sau nhiều lần thử' }));
+        return;
+    }
+
     try {
-        const authResponse = await axios.post(authUrl, authPayload, { headers: authHeaders});
-        if (authResponse.status === 200) {
-            const hash = authResponse.data.hash;
+        const farmingUrl = 'https://api.mmbump.pro/v1/farming';
+        const farmingHeaders = {
+            ...authHeaders,
+            'Authorization': hash
+        };
 
-            const farmingUrl = 'https://api.mmbump.pro/v1/farming';
-            const farmingHeaders = {
-                ...authHeaders,
-                'Authorization': hash
-            };
-
-            const farmingResponse = await axios.get(farmingUrl, { headers: farmingHeaders });
-            if (farmingResponse.status === 200) {
-                const farmingData = farmingResponse.data;
-                progress.update({ status: `ID: ${farmingData.telegram_id}, Balance: ${farmingData.balance}` });
-                const currentTime = Math.floor(Date.now() / 1000);
-                if (farmingData.day_grant_first === null || (currentTime - farmingData.day_grant_first) >= 86400) {
-                    const grantDayClaimUrl = 'https://api.mmbump.pro/v1/grant-day/claim';
+        const farmingResponse = await axios.get(farmingUrl, { headers: farmingHeaders });
+        await sleep(1000); 
+        if (farmingResponse.status === 200 && farmingResponse.data) {
+            const farmingData = farmingResponse.data;
+            messageQueue.addTask(() => progress.update({ status: `ID: ${farmingData.telegram_id}, Balance: ${farmingData.balance}` }));
+            await sleep(10000); 
+            const currentTime = Math.floor(Date.now() / 1000);
+            if (farmingData.day_grant_first === null || (currentTime - farmingData.day_grant_first) >= 86400) {
+                const grantDayClaimUrl = 'https://api.mmbump.pro/v1/grant-day/claim';
+                try {
                     await axios.post(grantDayClaimUrl, {}, { headers: farmingHeaders });
-                    progress.update({ status: 'Điểm danh hàng ngày' });
-                } else {
-                    progress.update({ status: 'Đã điểm danh hàng ngày' });
-                }
+                    messageQueue.addTask(() => progress.update({ status: 'Điểm danh hàng ngày' }));
 
-                if (farmingData.session.status === 'await') {
-                    const farmingStartUrl = 'https://api.mmbump.pro/v1/farming/start';
-                    const farmingStartPayload = { status: 'inProgress' };
-                    await axios.post(farmingStartUrl, farmingStartPayload, { headers: farmingHeaders });
-                    progress.update({ status: 'Bắt đầu farming...' });
-                } else {
-                    progress.update({ status: 'Đang trong trạng thái farming' });
+                } catch (e) {
+                    messageQueue.addTask(() => progress.update({ status: `Lỗi rồi: ${e.message}` }));
                 }
             } else {
-                progress.update({ status: 'Không thể lấy dữ liệu farming' });
+                messageQueue.addTask(() => progress.update({ status: 'Đã điểm danh hàng ngày' }));
             }
+            await sleep(10000); 
+            if (farmingData.session.status === 'await') {
+                const farmingStartUrl = 'https://api.mmbump.pro/v1/farming/start';
+                const farmingStartPayload = { status: 'inProgress' };
+                await axios.post(farmingStartUrl, farmingStartPayload, { headers: farmingHeaders });
+                messageQueue.addTask(() => progress.update({ status: 'Bắt đầu farming...' }));
+            } else if (farmingData.session.status === 'inProgress' && farmingData.session.moon_time > currentTime) {
+                messageQueue.addTask(() => progress.update({ status: 'Đang trong trạng thái farming' }));
+            } else {
+                await finishFarmingIfNeeded(farmingData, farmingHeaders, progress);
+            }
+            await finishFarmingIfNeeded(farmingData, farmingHeaders, progress);
+            await sleep(1000); 
         } else {
-            throw new Error('Không thể xác thực');
+            messageQueue.addTask(() => progress.update({ status: 'Không thể lấy dữ liệu farming' }));
         }
     } catch (error) {
-        progress.update({ status: `Lỗi rồi: ${error.message}` });
+        messageQueue.addTask(() => progress.update({ status: `Lỗi rồi: ${error.message}` }));
     }
 };
 
@@ -88,16 +163,19 @@ const main = async () => {
             const progress = progressBars.create(100, 0, { telegramId: telegramId.trim(), status: 'Bắt đầu...' });
 
             return (async () => {
+                await sleep(1000); 
                 await xuly(telegramId.trim(), progress);
+                await sleep(1000); 
                 progress.update(100, { status: 'Hoàn thành' });
-                progress.stop();
             })();
         });
 
         await Promise.all(tasks);
-        progressBars.stop();
+
+        messageQueue.addTask(() => progressBars.stop());
+
         console.log('Đã hoàn thành tất cả các ID, nghỉ 6 giờ trước khi tiếp tục vòng lặp...');
-        await new Promise(resolve => setTimeout(resolve, 6 * 60 * 60 * 1000 + 10 * 60 * 1000));
+        await new Promise(resolve => setTimeout(resolve, 6 * 60 * 60 * 1000)); 
     }
 };
 
