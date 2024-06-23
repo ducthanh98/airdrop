@@ -217,7 +217,7 @@ const claimDailyCombo = async (queryData, userInputOrder) => {
     }
 };
 
-const main = async () => {
+const pixel = async () => {
     const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout
@@ -313,5 +313,5 @@ const main = async () => {
 const startTime = moment();
 
 if (require.main === module) {
-    main();
+    pixel();
 }
