@@ -170,6 +170,7 @@ const claimDailyReward = async (queryData) => {
     }
 };
 
+
 const claimDailyCombo = async (queryData, userInputOrder) => {
     try {
         headers['initdata'] = queryData;
@@ -177,27 +178,20 @@ const claimDailyCombo = async (queryData, userInputOrder) => {
         if (response.status === 200) {
             const data = response.data;
             const comboId = data.id;
-            const options = data.availableOptions;
-            const jsonData = {};
-
-            const urlToIdMap = {};
-            options.forEach(option => {
-                const url = option.imageUrl;
-                const match = url.match(/_(\d+)\.png$/);
-                if (match) {
-                    const number = match[1];
-                    urlToIdMap[number] = option.id;
-                }
+            const availableOptions = data.availableOptions;
+            const numberToIdMap = {};
+            availableOptions.forEach((item, index) => {
+                numberToIdMap[index + 1] = item.id;
             });
+            const requestData = {};
             userInputOrder.forEach((order, index) => {
-                const id = urlToIdMap[order];
+                const id = numberToIdMap[order];
                 if (id) {
-                    jsonData[id] = index;
+                    requestData[id] = index;
                 }
             });
-
             console.log(`\r[ Daily Combo ] : Đang pick pet...`);
-            const answerResponse = await axios.post(`https://api-clicker.pixelverse.xyz/api/cypher-games/${comboId}/answer`, jsonData, { headers });
+            const answerResponse = await axios.post(`https://api-clicker.pixelverse.xyz/api/cypher-games/${comboId}/answer`, requestData, { headers });
             if (answerResponse.status !== 400) {
                 const answerData = answerResponse.data;
                 const jumlah = answerData.rewardAmount;
@@ -229,21 +223,10 @@ const main = async () => {
         output: process.stdout
     });
 
-    const question = (query) => new Promise((resolve) => rl.question(query, resolve));
-
-    const autoUpgradePet = (await question("Tự động nâng cấp pet? (mặc định no) (y/n): ")).trim().toLowerCase();
+    const autoUpgradePet = 'y';
     let maxLevelPet = 10;
-    if (autoUpgradePet === 'y') {
-        const inputLevel = await question("Bro muốn nâng đến lv bao nhiêu? (mặc định 10 ) : ");
-        maxLevelPet = inputLevel ? parseInt(inputLevel, 10) : 10;
-    }
-
-    const autoDailyCombo = (await question("Tự động pick Daily Combo? (mặc định no) (y/n): ")).trim().toLowerCase();
+    const autoDailyCombo = 'n';
     let userInputOrder = [];
-    if (autoDailyCombo === 'y') {
-        const userInput = await question("Nhập theo số pet trên nhóm: ");
-        userInputOrder = userInput.split(',').map(x => parseInt(x.trim(), 10));
-    }
 
     rl.close();
 
@@ -252,7 +235,9 @@ const main = async () => {
         try {
             const queries = fs.readFileSync('query.txt', 'utf-8').split('\n').map(line => line.trim());
 
-            for (const queryData of queries) {
+            for (let i = 0; i < queries.length; i++) {
+                const queryData = queries[i];
+
                 const userResponse = await getUserData(queryData);
 
                 if (userResponse) {
@@ -317,8 +302,8 @@ const main = async () => {
                 }
             }
 
-            console.log("Nghỉ ngơi 8 giờ trước khi chạy lại...");
-            await animatedLoading(8 * 60 * 60 * 1000); // 8 giờ
+            console.log("Nghỉ ngơi 1 giờ trước khi chạy lại...");
+            await animatedLoading(1 * 60 * 60 * 1000);
         } catch (error) {
             console.error(`Đã xảy ra lỗi: ${error.message}`);
         }
