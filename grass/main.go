@@ -158,6 +158,6 @@ func pingNetworkDevice(token string) {
 
 		fmt.Println("res", res)
 
-		time.Sleep(1 * time.Second)
+		time.Sleep(3 * time.Second)
 	}
 }
