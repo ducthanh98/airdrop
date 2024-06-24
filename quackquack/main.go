@@ -33,32 +33,38 @@ func collectEgg(duckApi *request.DuckApi) {
 	for {
 		listRes, err := duckApi.GetList()
 		if err != nil {
-			log.Errorln("Error", err)
+			log.Errorln("GetList Error", err)
 			continue
 		}
 		nests := listRes.Data.Nest
-		ranNest := rand.Intn(len(nests) - 1)
-		nest := nests[ranNest]
 
-		ducks := listRes.Data.Duck
-		randDuck := rand.Intn(len(ducks))
+		for i := 0; i < len(nests); i++ {
+			nest := nests[i]
 
-		duckApi.LayEgg(nest.ID, ducks[randDuck].ID)
+			ducks := listRes.Data.Duck
+			randDuck := rand.Intn(len(ducks))
 
-		res, _ := duckApi.CollectEgg(nest.ID)
-		log.Infoln("Collect Egg nestId", nest.ID, res)
-		time.Sleep(500 * time.Millisecond)
+			duckApi.LayEgg(nest.ID, ducks[randDuck].ID)
+
+			res, _ := duckApi.CollectEgg(nest.ID)
+			log.Infoln("Collect Egg nestId", nest.ID, res)
+			time.Sleep(100 * time.Millisecond)
+		}
+
 	}
 }
 
 func hatchDuck(duckApi *request.DuckApi) {
-	maxDuckRes, _ := duckApi.GetMaxDuck()
-	maxDuck := maxDuckRes.Data.MaxDuck
-	if maxDuck < 15 {
-		maxDuck = 15
-	}
 
 	for {
+		maxDuckRes, _ := duckApi.GetMaxDuck()
+		maxDuck := maxDuckRes.Data.MaxDuck
+		if maxDuck < 15 {
+			continue
+			// Sometimes the API does not work, so it will be skipped when the quantity is less than the default quantity.
+			// Otherwise, you might lose some rare ducks.
+		}
+
 		listRes, _ := duckApi.GetList()
 		nest := listRes.Data.Nest[len(listRes.Data.Nest)-1]
 		ducks := listRes.Data.Duck
