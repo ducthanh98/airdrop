@@ -9,13 +9,21 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/spf13/cast"
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"grass/constant"
 	"grass/request"
 	"log"
 	"time"
 )
 
+var logger *zap.Logger
+
 func main() {
+	config := zap.NewDevelopmentConfig()
+	config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	logger, _ = config.Build()
+
 	viper.SetConfigFile("./conf.toml")
 	err := viper.ReadInConfig() // Find and read the config file
 	if err != nil {             // Handle errors reading the config file
@@ -100,16 +108,30 @@ func sendAuth(msg *request.WsMessage, token string, c *websocket.Conn) {
 	deviceId := viper.GetString("data.deviceId")
 	userId := viper.GetString("data.userId")
 
-	tmp := request.AuthRequest{
+	//tmp := request.AuthRequest{
+	//	ID:           msg.ID,
+	//	OriginAction: "AUTH",
+	//	Result: request.AuthData{
+	//		BrowserID:  deviceId,
+	//		UserID:     userId,
+	//		UserAgent:  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+	//		Timestamp:  cast.ToInt(time.Now().Format("20060102150405")),
+	//		DeviceType: "extension",
+	//		Version:    "4.0.3",
+	//	},
+	//}
+
+	tmp := request.AuthRequestCommunity{
 		ID:           msg.ID,
 		OriginAction: "AUTH",
-		Result: request.AuthData{
-			BrowserID:  deviceId,
-			UserID:     userId,
-			UserAgent:  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-			Timestamp:  cast.ToInt(time.Now().Format("20060102150405")),
-			DeviceType: "extension",
-			Version:    "4.0.3",
+		Result: request.ResultCommunity{
+			BrowserID:   deviceId,
+			UserID:      userId,
+			UserAgent:   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+			Timestamp:   cast.ToInt(time.Now().Format("20060102150405")),
+			DeviceType:  "extension",
+			Version:     "4.20.2",
+			ExtensionID: "lkbnfiajjmbhnfledhphioinpickokdi",
 		},
 	}
 	body, _ := json.Marshal(tmp)

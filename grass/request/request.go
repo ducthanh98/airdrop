@@ -37,3 +37,18 @@ type PingMessage struct {
 	ID     string `json:"id"`
 	Action string `json:"action"`
 }
+
+type AuthRequestCommunity struct {
+	ID           string          `json:"id"`
+	OriginAction string          `json:"origin_action"`
+	Result       ResultCommunity `json:"result"`
+}
+type ResultCommunity struct {
+	BrowserID   string `json:"browser_id"`
+	UserID      string `json:"user_id"`
+	UserAgent   string `json:"user_agent"`
+	Timestamp   int    `json:"timestamp"`
+	DeviceType  string `json:"device_type"`
+	Version     string `json:"version"`
+	ExtensionID string `json:"extension_id"`
+}
