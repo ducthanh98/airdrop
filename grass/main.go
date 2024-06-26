@@ -14,6 +14,8 @@ import (
 	"grass/constant"
 	"grass/request"
 	"log"
+	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -31,21 +33,27 @@ func main() {
 	}
 
 	token := viper.GetString("data.token")
+	proxies := viper.GetStringSlice("data.proxies")
 
-	go pingNetworkDevice(token)
-	go connectSocket(token)
+	for _, proxyURL := range proxies {
+		go pingNetworkDevice(token, proxyURL)
+		go connectSocket(token, proxyURL)
+	}
+
 	select {}
 
 }
 
-func connectSocket(token string) {
+func connectSocket(token string, proxyURL string) {
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: true, // This skips SSL verification
 	}
+	proxy, _ := url.Parse(proxyURL)
 
 	// Create a WebSocket dialer with the custom TLS configuration
 	dialer := websocket.Dialer{
 		TLSClientConfig: tlsConfig,
+		Proxy:           http.ProxyURL(proxy),
 	}
 	c, resp, err := dialer.Dial(constant.BASE_WSS, nil)
 	if err != nil {
@@ -59,7 +67,7 @@ func connectSocket(token string) {
 			log.Println("Read message error:", err)
 			time.Sleep(1 * time.Minute)
 			log.Println("Error. Reconnecting after a minute")
-			go connectSocket(token)
+			go connectSocket(token, proxyURL)
 			return
 		}
 		var msg *request.WsMessage
@@ -144,8 +152,9 @@ func sendAuth(msg *request.WsMessage, token string, c *websocket.Conn) {
 	sendPing(c)
 }
 
-func pingNetworkDevice(token string) {
+func pingNetworkDevice(token string, proxyUrl string) {
 	client := resty.New()
+	client.SetProxy(proxyUrl)
 
 	for {
 
