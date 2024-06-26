@@ -39,7 +39,7 @@ func main() {
 			SetResult(&publicIp).
 			Get("https://api.ipify.org?format=json")
 		if err != nil {
-			panic("Can't get public ip")
+			fmt.Println(proxyURL, "Can't get public ip")
 		}
 
 		go pingNetworkDevice(token, proxyURL, publicIp.IP)
@@ -206,12 +206,13 @@ func pingNetworkDevice(token, proxyURL string, ip string) {
 
 	for {
 
-		_, err := client.R().
+		res, err := client.R().
 			SetAuthToken(token).
 			Get(fmt.Sprintf("%v/network/device-network?ip=%v", constant.BASE_URL, ip))
 		if err != nil {
 			log.Println("Can't ping device")
 		}
+		fmt.Println("res", res)
 
 		time.Sleep(3 * time.Second)
 	}
