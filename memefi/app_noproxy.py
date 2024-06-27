@@ -16,38 +16,7 @@ def generate_random_nonce(length=52):
     characters = string.ascii_letters + string.digits
     return ''.join(random.choice(characters) for _ in range(length))
 
-def load_proxies(file_path='proxy.txt'):
-    with open(file_path, 'r') as file:
-        proxies = file.readlines()
-    return [proxy.strip() for proxy in proxies]
-
-async def check_proxy(proxy, proxy_check_results):
-    if proxy in proxy_check_results:
-        return proxy_check_results[proxy]
-    
-    test_url = "https://httpbin.org/ip"  
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(test_url, proxy=proxy, timeout=10) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    ip = data['origin']
-                    proxy_check_results[proxy] = ip
-                    return ip
-                else:
-                    print(f"❌ Proxy {proxy} không khả dụng. Trạng thái: {response.status}")
-                    proxy_check_results[proxy] = None
-                    return None
-    except Exception as e:
-        print(f"❌ Proxy {proxy} không khả dụng. Lỗi: {e}")
-        proxy_check_results[proxy] = None
-        return None
 async def fetch(account_line, proxy, proxy_check_results):
-    proxy_ip = await check_proxy(proxy, proxy_check_results)
-    if not proxy_ip:
-        print(f"❌ Không thể sử dụng proxy {proxy}.")
-        return None
-
     with open('query_id.txt', 'r') as file:
         lines = file.readlines()
         raw_data = lines[account_line - 1].strip()
@@ -93,7 +62,7 @@ async def fetch(account_line, proxy, proxy_check_results):
                     return None
                 else:
                     access_token = json_response['data']['telegramUserLogin']['access_token']
-                    return access_token, proxy_ip
+                    return access_token
             except aiohttp.ContentTypeError:
                 print("Không thể giải mã JSON")
                 return None, None
@@ -103,7 +72,7 @@ async def check_user(index, proxy, proxy_check_results):
     if not result:
         return None, None
 
-    access_token, proxy_ip = result
+    access_token = result
 
     url = "https://api-gw-tg.memefi.club/graphql"
 
@@ -125,7 +94,7 @@ async def check_user(index, proxy, proxy_check_results):
                     return None, None
                 else:
                     user_data = response_data['data']['telegramUserMe']
-                    return user_data, proxy_ip
+                    return user_data
             else:
                 print(response)
                 print(f"❌ Lỗi với trạng thái {response.status}, thử lại...")
@@ -136,7 +105,7 @@ async def activate_energy_recharge_booster(index, headers, proxy, proxy_check_re
     if not result:
         return None
 
-    access_token, _ = result
+    access_token = result
 
     url = "https://api-gw-tg.memefi.club/graphql"
 
@@ -167,7 +136,7 @@ async def activate_booster(index, headers, proxy, proxy_check_results):
     if not result:
         return None
 
-    access_token, _ = result
+    access_token = result
 
     url = "https://api-gw-tg.memefi.club/graphql"
     print("\r🚀 Kích hoạt Turbo Boost... ", end="", flush=True)
@@ -231,7 +200,7 @@ async def submit_taps(index, json_payload, proxy, proxy_check_results):
     if not result:
         return None
 
-    access_token, _ = result
+    access_token = result
 
     url = "https://api-gw-tg.memefi.club/graphql"
 
@@ -257,7 +226,7 @@ async def set_next_boss(index, headers, proxy, proxy_check_results):
     if not result:
         return None
 
-    access_token, _ = result
+    access_token = result
 
     url = "https://api-gw-tg.memefi.club/graphql"
 
@@ -297,7 +266,7 @@ async def check_stat(index, headers, proxy, proxy_check_results):
     if not result:
         return None
 
-    access_token, _ = result
+    access_token = result
 
     url = "https://api-gw-tg.memefi.club/graphql"
 
@@ -326,56 +295,6 @@ async def check_stat(index, headers, proxy, proxy_check_results):
 
 async def main():
     print("Bắt đầu Memefi bot...")
-    print("\rKiểm tra proxy...", end="", flush=True)
-    proxies = load_proxies()
-    new_proxies = load_proxies('proxy.txt')
-    old_unavailable_proxies = load_proxies('proxy_unavailable.txt')
-    unavailable_proxies = []
-    proxy_check_results = {}
-
-    def save_proxies(file_path, proxies_list):
-        with open(file_path, 'w') as file:
-            for proxy in proxies_list:
-                file.write(f"{proxy.strip()}\n") 
-
-
-    async def replace_invalid_proxy(proxy):
-        if new_proxies:
-            while new_proxies:
-                new_proxy = new_proxies.pop(0).strip() 
-                if await check_proxy(new_proxy, proxy_check_results):
-                    save_proxies('proxy_new.txt', new_proxies)
-                    return new_proxy
-                else:
-                    unavailable_proxies.append(new_proxy)
-        return None
-
-    valid_proxies = []
-    unavailable_proxies = old_unavailable_proxies.copy()
-    for proxy in proxies:
-        proxy = proxy.strip() 
-        if await check_proxy(proxy, proxy_check_results):
-            valid_proxies.append(proxy)
-        else:
-            unavailable_proxies.append(proxy)
-            new_proxy = await replace_invalid_proxy(proxy)
-            if new_proxy:
-                valid_proxies.append(new_proxy)  
-            else:
-                print("\nKhông đủ proxy mới để thay thế tất cả proxy không hợp lệ.")
-                break  
-
-    if len(valid_proxies) != len(proxies):
-        print("\nKhông thể thay thế tất cả proxy không hợp lệ. Dừng quá trình.")
-        save_proxies('proxy_unavailable.txt', unavailable_proxies)
-        return
-
-    save_proxies('proxy.txt', valid_proxies)
-    save_proxies('proxy_unavailable.txt', unavailable_proxies)
-
-
-    print("\nTất cả proxy đều hợp lệ. lấy danh sách tài khoản...")
-
 
     while True:
         with open('query_id.txt', 'r') as file:
@@ -383,22 +302,21 @@ async def main():
 
         accounts = []
         for index, line in enumerate(lines):
-            proxy = valid_proxies[index % len(valid_proxies)]
-            result, proxy_ip = await check_user(index, proxy, proxy_check_results)
+            result = await check_user(index, None, None)
             if result is not None:
                 first_name = result.get('firstName', 'Unknown')
                 last_name = result.get('lastName', 'Unknown')
-                accounts.append((index, result, first_name, last_name, proxy_ip))
+                accounts.append((index, result, first_name, last_name))
             else:
                 print(f"❌ Tài khoản {index + 1}: Token không hợp lệ hoặc có lỗi xảy ra")
 
         print("\rDanh sách tài khoản:", flush=True)
-        for index, _, first_name, last_name, proxy_ip in accounts:
-            print(f"✅ [ Tài khoản {first_name} {last_name} ] | Proxy hoạt động. IP: {proxy_ip}")
+        for index, _, first_name, last_name in accounts:
+            print(f"✅ [ Tài khoản {first_name} {last_name} ] ")
 
-        for index, result, first_name, last_name, proxy_ip in accounts:
+        for index, result, first_name, last_name in accounts:
             headers = {'Authorization': f'Bearer {result}'}
-            stat_result = await check_stat(index, headers, proxies[index % len(proxies)], proxy_check_results)
+            stat_result = await check_stat(index, headers, None, None)
 
             if stat_result is not None:
                 user_data = stat_result
@@ -417,7 +335,7 @@ async def main():
                     continue
                 if mau_boss == 0:
                     print("\nBoss đã bị hạ gục, chuyển boss tiếp theo...", flush=True)
-                    await set_next_boss(index, headers, proxies[index % len(proxies)], proxy_check_results)
+                    await set_next_boss(index, headers, None, None)
                 print("\rBắt đầu tap\n", end="", flush=True)
 
                 energy_now = user_data['currentEnergy']
@@ -435,9 +353,9 @@ async def main():
                         "query": MUTATION_GAME_PROCESS_TAPS_BATCH
                     }
 
-                    tap_result = await submit_taps(index, tap_payload, proxies[index % len(proxies)], proxy_check_results)
+                    tap_result = await submit_taps(index, tap_payload, None, None)
                     if tap_result is not None:
-                        user_data = await check_stat(index, headers, proxies[index % len(proxies)], proxy_check_results)
+                        user_data = await check_stat(index, headers, None, None)
                         energy_now = user_data['currentEnergy']
                         recharge_available = user_data['freeBoosts']['currentRefillEnergyAmount']
                         print(f"\rĐang tap Memefi : Balance 💎 {user_data['coinsAmount']} Năng lượng : {energy_now} / {user_data['maxEnergy']}\n")
@@ -447,8 +365,8 @@ async def main():
                     if energy_now < 500:
                         if recharge_available > 0:
                             print("\rHết năng lượng, kích hoạt Recharge... \n", end="", flush=True)
-                            await activate_energy_recharge_booster(index, headers, proxies[index % len(proxies)], proxy_check_results)
-                            user_data = await check_stat(index, headers, proxies[index % len(proxies)], proxy_check_results)
+                            await activate_energy_recharge_booster(index, headers, None, None)
+                            user_data = await check_stat(index, headers, None, None)
                             energy_now = user_data['currentEnergy']
                             recharge_available = user_data['freeBoosts']['currentRefillEnergyAmount']
                         else:
@@ -456,7 +374,7 @@ async def main():
                             break
 
                     if user_data['freeBoosts']['currentTurboAmount'] > 0:
-                        await activate_booster(index, headers, proxies[index % len(proxies)], proxy_check_results)
+                        await activate_booster(index, headers, None, None)
         print("=== [ TẤT CẢ TÀI KHOẢN ĐÃ ĐƯỢC XỬ LÝ ] ===")
     
         animate_energy_recharge(600)
