@@ -8,14 +8,19 @@ import (
 
 type DuckApi struct {
 	Token string
+	Proxy string
 }
 
-func NewDuckApi(token string) *DuckApi {
-	return &DuckApi{Token: token}
+func NewDuckApi(token string, proxy string) *DuckApi {
+	return &DuckApi{
+		Token: token,
+		Proxy: proxy,
+	}
 }
 
 func (a *DuckApi) CollectEgg(nestId int) (*resty.Response, error) {
 	client := resty.New()
+	client.SetProxy(a.Proxy)
 
 	return client.R().
 		SetAuthToken(a.Token).
@@ -26,6 +31,7 @@ func (a *DuckApi) CollectEgg(nestId int) (*resty.Response, error) {
 
 func (a *DuckApi) HatchDuck(nestId int) (*resty.Response, error) {
 	client := resty.New()
+	client.SetProxy(a.Proxy)
 
 	return client.R().
 		SetAuthToken(a.Token).
@@ -36,6 +42,7 @@ func (a *DuckApi) HatchDuck(nestId int) (*resty.Response, error) {
 
 func (a *DuckApi) CollectDuck(nestId int) (*resty.Response, error) {
 	client := resty.New()
+	client.SetProxy(a.Proxy)
 
 	return client.R().
 		SetAuthToken(a.Token).
@@ -46,6 +53,7 @@ func (a *DuckApi) CollectDuck(nestId int) (*resty.Response, error) {
 
 func (a *DuckApi) LayEgg(nestId int, duckId int) (*resty.Response, error) {
 	client := resty.New()
+	client.SetProxy(a.Proxy)
 
 	return client.R().
 		SetAuthToken(a.Token).
@@ -56,6 +64,7 @@ func (a *DuckApi) LayEgg(nestId int, duckId int) (*resty.Response, error) {
 
 func (a *DuckApi) CollectGoldenDuck() (*resty.Response, error) {
 	client := resty.New()
+	client.SetProxy(a.Proxy)
 
 	return client.R().
 		SetAuthToken(a.Token).
@@ -66,6 +75,7 @@ func (a *DuckApi) CollectGoldenDuck() (*resty.Response, error) {
 
 func (a *DuckApi) RewardGoldenDuck() (*resty.Response, error) {
 	client := resty.New()
+	client.SetProxy(a.Proxy)
 
 	return client.R().
 		SetAuthToken(a.Token).
@@ -75,6 +85,8 @@ func (a *DuckApi) RewardGoldenDuck() (*resty.Response, error) {
 
 func (a *DuckApi) GetList() (*GetAllDuck, error) {
 	client := resty.New()
+	client.SetProxy(a.Proxy)
+
 	var res = &GetAllDuck{}
 
 	_, err := client.R().
@@ -87,6 +99,8 @@ func (a *DuckApi) GetList() (*GetAllDuck, error) {
 
 func (a *DuckApi) GetMaxDuck() (*MaxDuckResponse, error) {
 	client := resty.New()
+	client.SetProxy(a.Proxy)
+
 	var res = &MaxDuckResponse{}
 	_, err := client.R().
 		SetAuthToken(a.Token).
@@ -98,6 +112,7 @@ func (a *DuckApi) GetMaxDuck() (*MaxDuckResponse, error) {
 
 func (a *DuckApi) RemoveDuck(duckIds []int) (*resty.Response, error) {
 	client := resty.New()
+	client.SetProxy(a.Proxy)
 
 	tmp := RemoveDuckRequest2{Ducks: duckIds}
 	json_str, _ := json.Marshal(tmp)

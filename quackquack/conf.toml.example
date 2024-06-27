@@ -1,2 +1,5 @@
 [auth]
 tokens=[]
+
+[proxies]
+data=[]

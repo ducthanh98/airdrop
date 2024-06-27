@@ -18,8 +18,10 @@ func main() {
 	}
 
 	tokens := (viper.Get("auth.tokens")).([]interface{})
-	for _, token := range tokens {
-		var duckApi = request.NewDuckApi(token.(string))
+	proxies := viper.GetStringSlice("proxies.data")
+	for i, token := range tokens {
+		proxy := proxies[i%len(proxies)]
+		var duckApi = request.NewDuckApi(token.(string), proxy)
 		go hatchDuck(duckApi)
 		go collectEgg(duckApi)
 		go collectGoldenDuck(duckApi)
