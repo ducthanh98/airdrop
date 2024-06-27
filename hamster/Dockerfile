@@ -6,6 +6,6 @@ COPY package*.json ./
 
 RUN npm install
 
-COPY main_noproxy.js .
+COPY main.js .
 
 CMD [ "node", "main.js" ]
