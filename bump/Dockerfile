@@ -1,4 +1,4 @@
-FROM node:12.22.12-alpine
+FROM node:20.10.0-alpine
 
 WORKDIR /app
 
@@ -6,6 +6,6 @@ COPY package*.json ./
 
 RUN npm install
 
-COPY bump_noproxy.js .
+COPY main.js .
 
 CMD [ "node", "main.js" ]
