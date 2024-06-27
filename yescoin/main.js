@@ -1,5 +1,7 @@
 const axios = require('axios');
 const fs = require('fs');
+const path = require('path');
+const { HttpsProxyAgent } = require('https-proxy-agent');
 
 
 const randomNumber = Math.floor(Math.random() * (100 - 50 + 1)) + 50;
@@ -9,11 +11,14 @@ const getUrl = 'https://api.yescoin.gold/account/getAccountInfo';
 const getGameInfoUrl = 'https://api.yescoin.gold/game/getGameInfo';
 const tokenFilePath = 'query.txt';
 let currentIndex = 0;
+const proxyFilePath = path.join(__dirname, 'proxy.txt');
+const proxies = fs.readFileSync(proxyFilePath, 'utf8').trim().split('\n');
 
 
-async function getGameInfoAndLog(headers) {
+async function getGameInfoAndLog(headers,proxy) {
     try {
-        const gameInfoResponse = await axios.get(getGameInfoUrl, { headers });
+        const proxyAgent = new HttpsProxyAgent(proxy);
+        const gameInfoResponse = await axios.get(getGameInfoUrl, { headers, httpsAgent: proxyAgent });
         if (gameInfoResponse.status === 200) {
             const { coinPoolTotalCount, coinPoolLeftCount } = gameInfoResponse.data.data;
             console.log(`Năng Lượng: ${coinPoolLeftCount}/${coinPoolTotalCount}`);
@@ -29,7 +34,7 @@ async function getGameInfoAndLog(headers) {
 }
 
 
-async function claimForToken(token) {
+async function claimForToken(token, proxy) {
     try {
         const headers = {
             'Content-Type': 'application/json',
@@ -49,16 +54,16 @@ async function claimForToken(token) {
         };
 
 
-        const coinPoolLeftCount = await getGameInfoAndLog(headers);
+        const coinPoolLeftCount = await getGameInfoAndLog(headers,proxy);
         if (coinPoolLeftCount < 100) {
             console.log(`Energy nhỏ hơn 100 token ${token.substring(0, 35)}... Claim token tiếp theo`);
             return true; 
         }
 
-
-        const postResponse = await axios.post(postUrl, postData, { headers });
+        const proxyAgent = new HttpsProxyAgent(proxy);
+        const postResponse = await axios.post(postUrl, postData, { headers, httpsAgent: proxyAgent });
         if (postResponse.status === 200) {
-            const getResponse = await axios.get(getUrl, { headers });
+            const getResponse = await axios.get(getUrl, { headers, httpsAgent: proxyAgent });
             if (getResponse.status === 200) {
                 const { totalAmount, userLevel, rank } = getResponse.data.data;
                 console.log(`Claim thành công cho token ${token.substring(0, 35)}...: Balance: ${totalAmount}, User Level: ${userLevel}, Rank: ${rank}`);
@@ -84,7 +89,8 @@ async function claimAndResetInterval() {
         }
         const tokens = data.split('\n').map(line => line.trim()).filter(line => line !== '');
         if (currentIndex < tokens.length) {
-            let shouldSwitchToken = await claimForToken(tokens[currentIndex]);
+            const proxy = proxies[currentIndex % proxies.length].trim()
+            let shouldSwitchToken = await claimForToken(tokens[currentIndex], proxy);
             if (shouldSwitchToken) {
                 currentIndex++; 
             }
