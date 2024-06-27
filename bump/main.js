@@ -1,10 +1,12 @@
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
-const cliProgress = require('cli-progress');
+const { HttpsProxyAgent } = require('https-proxy-agent');
 
 const idsFilePath = path.join(__dirname, 'query.txt');
 const telegramIds = fs.readFileSync(idsFilePath, 'utf8').trim().split('\n');
+const proxyFilePath = path.join(__dirname, 'proxy.txt');
+const proxies = fs.readFileSync(proxyFilePath, 'utf8').trim().split('\n');
 
 const authUrl = 'https://api.mmbump.pro/v1/auth';
 const authHeaders = {
@@ -23,159 +25,160 @@ const authHeaders = {
     'User-Agent': 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36'
 };
 
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-
-const createQueue = () => {
-    const tasks = [];
-    let pendingPromise = false;
-
-    return {
-        addTask: (task) => {
-            tasks.push(task);
-            if (!pendingPromise) {
-                pendingPromise = true;
-                processQueue();
-            }
+const checkProxyIP = async (proxy) => {
+    try {
+        const proxyAgent = new HttpsProxyAgent(proxy);
+        const response = await axios.get('https://api.ipify.org?format=json', {
+            httpsAgent: proxyAgent
+        });
+        if (response.status === 200) {
+            console.log('\nYour proxy ip is:', response.data.ip);
+        } else {
+            console.error('Check proxy ip error. Status code:', response.status);
         }
-    };
-
-    async function processQueue() {
-        while (tasks.length > 0) {
-            const task = tasks.shift();
-            await task();
-        }
-        pendingPromise = false;
+    } catch (error) {
+        console.error('Check proxy error:', error);
     }
 };
 
-const messageQueue = createQueue();
-
-
-const finishFarmingIfNeeded = async (farmingData, farmingHeaders, progress) => {
+const finishFarmingIfNeeded = async (farmingData, farmingHeaders, proxyAgent) => {
     const currentTime = Math.floor(Date.now() / 1000);
     if (farmingData.session.status === 'inProgress' && currentTime > farmingData.session.moon_time) {
         try {
+            const rdTapCount = Math.floor(Math.random() * (150000 - 50000 + 1)) + 50000;
             const finishUrl = 'https://api.mmbump.pro/v1/farming/finish';
-            const finishPayload = { tapCount: 0 };
-            await axios.post(finishUrl, finishPayload, { headers: farmingHeaders });
-            messageQueue.addTask(() => progress.update({ status: 'Đã hoàn thành farming' }));
+            const finishPayload = { tapCount: rdTapCount };
 
-            const farmingStartUrl = 'https://api.mmbump.pro/v1/farming/start';
-            const farmingStartPayload = { status: 'inProgress' };
-            await axios.post(farmingStartUrl, farmingStartPayload, { headers: farmingHeaders });
-            messageQueue.addTask(() => progress.update({ status: 'Bắt đầu farming...' }));
-        } catch (error) {
-            messageQueue.addTask(() => progress.update({ status: `Lỗi khi hoàn thành farming: ${error.message}` }));
-        }
-    } else {
-        messageQueue.addTask(() => progress.update({ status: 'Đang trong trạng thái farming' }));
-    }
-};
+            const finishResponse = await axios.post(finishUrl, finishPayload, { headers: farmingHeaders, httpsAgent: proxyAgent });
 
-const xuly = async (telegramId, progress) => {
-    const authPayload = `telegram_id=${telegramId}`;
+            if (finishResponse.status === 200) {
+                console.log('Finish farming');
 
-    let hash = null;
-    let attempt = 1;
-    while (!hash) {
-        try {
-            const authResponse = await axios.post(authUrl, authPayload, { headers: authHeaders });
-            await sleep(10000); 
-            if (authResponse.status === 200 && authResponse.data) {
-                hash = authResponse.data.hash;
-                messageQueue.addTask(() => progress.update({ status: `Xác thực thành công` }));
-            } else {
-                throw new Error('Không thể xác thực');
-            }
-        } catch (error) {
-            messageQueue.addTask(() => progress.update({ status: `Lần thử ${attempt}: Lỗi khi xác thực: ${error.message}` }));
-            await sleep(1000); 
-        }
-        attempt++;
-    }
-
-    if (!hash) {
-        messageQueue.addTask(() => progress.update({ status: 'Không thể xác thực sau nhiều lần thử' }));
-        return;
-    }
-
-    try {
-        const farmingUrl = 'https://api.mmbump.pro/v1/farming';
-        const farmingHeaders = {
-            ...authHeaders,
-            'Authorization': hash
-        };
-
-        const farmingResponse = await axios.get(farmingUrl, { headers: farmingHeaders });
-        await sleep(1000); 
-        if (farmingResponse.status === 200 && farmingResponse.data) {
-            const farmingData = farmingResponse.data;
-            messageQueue.addTask(() => progress.update({ status: `ID: ${farmingData.telegram_id}, Balance: ${farmingData.balance}` }));
-            await sleep(10000); 
-            const currentTime = Math.floor(Date.now() / 1000);
-            if (farmingData.day_grant_first === null || (currentTime - farmingData.day_grant_first) >= 86400) {
-                const grantDayClaimUrl = 'https://api.mmbump.pro/v1/grant-day/claim';
-                try {
-                    await axios.post(grantDayClaimUrl, {}, { headers: farmingHeaders });
-                    messageQueue.addTask(() => progress.update({ status: 'Điểm danh hàng ngày' }));
-
-                } catch (e) {
-                    messageQueue.addTask(() => progress.update({ status: `Lỗi rồi: ${e.message}` }));
-                }
-            } else {
-                messageQueue.addTask(() => progress.update({ status: 'Đã điểm danh hàng ngày' }));
-            }
-            await sleep(10000); 
-            if (farmingData.session.status === 'await') {
                 const farmingStartUrl = 'https://api.mmbump.pro/v1/farming/start';
                 const farmingStartPayload = { status: 'inProgress' };
-                await axios.post(farmingStartUrl, farmingStartPayload, { headers: farmingHeaders });
-                messageQueue.addTask(() => progress.update({ status: 'Bắt đầu farming...' }));
-            } else if (farmingData.session.status === 'inProgress' && farmingData.session.moon_time > currentTime) {
-                messageQueue.addTask(() => progress.update({ status: 'Đang trong trạng thái farming' }));
+
+                const startResponse = await axios.post(farmingStartUrl, farmingStartPayload, { headers: farmingHeaders, httpsAgent: proxyAgent });
+
+                if (startResponse.status === 200) {
+                    console.log('Start farming...');
+                } else {
+                    console.error('Start farming error:', startResponse.data);
+                }
             } else {
-                await finishFarmingIfNeeded(farmingData, farmingHeaders, progress);
+                console.error('Start farming error:', finishResponse.data);
             }
-            await finishFarmingIfNeeded(farmingData, farmingHeaders, progress);
-            await sleep(1000); 
-        } else {
-            messageQueue.addTask(() => progress.update({ status: 'Không thể lấy dữ liệu farming' }));
+        } catch (error) {
+            console.error('Finish farming error:', error.message);
+            if (error.response) {
+                console.error('Response data:', JSON.stringify(error.response.data, null, 2));
+            }
         }
-    } catch (error) {
-        messageQueue.addTask(() => progress.update({ status: `Lỗi rồi: ${error.message}` }));
+    } else {
+        console.log(' farming: in progress');
     }
 };
 
-const clearConsole = () => {
-    process.stdout.write('\x1Bc');
+const xuly = async (telegramId, proxy) => {
+    const proxyAgent = new HttpsProxyAgent(proxy);
+    const authPayload = `telegram_id=${telegramId}`;
+
+    try {
+        const authResponse = await axios.post(authUrl, authPayload, { headers: authHeaders, httpsAgent: proxyAgent });
+        if (authResponse.status === 200) {
+            const hash = authResponse.data.hash;
+
+            const farmingUrl = 'https://api.mmbump.pro/v1/farming';
+            const farmingHeaders = {
+                ...authHeaders,
+                'Authorization': hash
+            };
+
+            let farmingData;
+            let attempts = 0;
+            const maxAttempts = 5;
+
+            while (attempts < maxAttempts) {
+                const farmingResponse = await axios.get(farmingUrl, { headers: farmingHeaders, httpsAgent: proxyAgent });
+                if (farmingResponse.status === 200) {
+                    farmingData = farmingResponse.data;
+                    if (farmingData.telegram_id !== undefined && farmingData.balance !== undefined) {
+                        break;
+                    }
+                }
+                attempts++;
+                console.log(`attempts: ${attempts} fetch farming data...`);
+            }
+
+            if (farmingData && farmingData.telegram_id !== undefined && farmingData.balance !== undefined) {
+                console.log('========================================');
+                console.log('ID:', farmingData.telegram_id);
+                console.log('Balance:', farmingData.balance);
+                console.log('===============================================');
+                const currentTime = Math.floor(Date.now() / 1000);
+
+                try {
+                    if (farmingData.day_grant_first === null || (currentTime - farmingData.day_grant_first) >= 86400) {
+                        const grantDayClaimUrl = 'https://api.mmbump.pro/v1/grant-day/claim';
+                        await axios.post(grantDayClaimUrl, {}, { headers: farmingHeaders, httpsAgent: proxyAgent });
+                        console.log('Daily checkin');
+                    } else {
+                        console.log('Daily checkin');
+                    }
+                } catch (grantError) {
+                    if (grantError.response && grantError.response.status === 400) {
+                        console.log('Daily checkin');
+                    } else {
+                        throw grantError;
+                    }
+                }
+
+                if (farmingData.session.status === 'await') {
+                    const farmingStartUrl = 'https://api.mmbump.pro/v1/farming/start';
+                    const farmingStartPayload = { status: 'inProgress' };
+                    await axios.post(farmingStartUrl, farmingStartPayload, { headers: farmingHeaders, httpsAgent: proxyAgent });
+                    console.log('Start farming...');
+                } else if (farmingData.session.status === 'inProgress' && farmingData.session.moon_time > currentTime) {
+                    console.log('Farming: inProgress');
+                } else {
+                    await finishFarmingIfNeeded(farmingData, farmingHeaders, proxyAgent);
+                }
+            } else {
+                console.error('Fetch farming data error');
+            }
+        } else {
+            throw new Error('Auth failed');
+        }
+    } catch (error) {
+        console.error('Unknown error:', error);
+    }
+};
+
+const animatedLoading = (durationInMilliseconds) => {
+    const frames = ["|", "/", "-", "\\"];
+    const endTime = Date.now() + durationInMilliseconds;
+    return new Promise(resolve => {
+        const interval = setInterval(() => {
+            const remainingTime = Math.floor((endTime - Date.now()) / 1000);
+            const frame = frames[Math.floor(Date.now() / 250) % frames.length];
+            process.stdout.write(`\rWaiting ${frame} - Remaining ${remainingTime} second...`);
+            if (Date.now() >= endTime) {
+                clearInterval(interval);
+                process.stdout.write("\rWaiting the next request.\n");
+                resolve();
+            }
+        }, 250);
+    });
 };
 
 const main = async () => {
     while (true) {
-        clearConsole();
-        const progressBars = new cliProgress.MultiBar({
-            clearOnComplete: false,
-            hideCursor: true,
-            format: '{telegramId} | {bar} | {status}'
-        }, cliProgress.Presets.shades_classic);
-
-        const tasks = telegramIds.map((telegramId, index) => {
-            const progress = progressBars.create(100, 0, { telegramId: telegramId.trim(), status: 'Bắt đầu...' });
-
-            return (async () => {
-                await sleep(1000); 
-                await xuly(telegramId.trim(), progress);
-                await sleep(1000); 
-                progress.update(100, { status: 'Hoàn thành' });
-            })();
-        });
-
-        await Promise.all(tasks);
-
-        messageQueue.addTask(() => progressBars.stop());
-
-        console.log('Đã hoàn thành tất cả các ID, nghỉ 6 giờ trước khi tiếp tục vòng lặp...');
-        await new Promise(resolve => setTimeout(resolve, 6 * 60 * 60 * 1000)); 
+        for (let i = 0; i < telegramIds.length; i++) {
+            const telegramId = telegramIds[i].trim();
+            const proxy = proxies[i].trim();
+            await checkProxyIP(proxy);
+            await xuly(telegramId, proxy);
+        }
+        await animatedLoading(6 * 60 * 60 * 1000);
     }
 };
 

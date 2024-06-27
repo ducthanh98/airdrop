@@ -6,6 +6,6 @@ COPY package*.json ./
 
 RUN npm install
 
-COPY main.js .
+COPY bump_noproxy.js .
 
 CMD [ "node", "main.js" ]
