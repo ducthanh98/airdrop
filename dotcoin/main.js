@@ -14,7 +14,7 @@ function clearConsole() {
 
 function loadCredentials() {
     try {
-        const credentialsList = fs.readFileSync('authorization.txt', 'utf8').split('\n');
+        const credentialsList = fs.readFileSync('query.txt', 'utf8').split('\n');
         const credentials = credentialsList.map(cred => cred.trim());
         return credentials;
     } catch (error) {
@@ -230,10 +230,10 @@ async function getUserInfo(apikey, authorization, proxy) {
 }
 
 function autoUpgradeDailyAttempt() {
-    const userInput = readlineSync.question("Auto upgrades daily attempt (y/n): ").trim().toLowerCase();
+    const userInput = 'y';
     if (userInput === 'y') {
         try {
-            const nUpgrade = parseInt(readlineSync.question("Number of upgrades? "), 10);
+            const nUpgrade = 10;
             return isNaN(nUpgrade) ? 0 : nUpgrade;
         } catch (error) {
             console.error("Dữ liệu nhập không hợp lệ, phải là số.");
@@ -281,7 +281,7 @@ async function autoGame(apikey, authorization, coins, proxy) {
 }
 
 async function main() {
-    const clearTask = readlineSync.question("Auto Complete Task? (y/n): ").trim().toLowerCase() || 'n';
+    const clearTask = 'y';
     const credentials = loadCredentials();
     const proxies = loadProxies();
     const nUpgrade = autoUpgradeDailyAttempt(); 

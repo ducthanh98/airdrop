@@ -245,7 +245,7 @@ async function autoGame(apikey, authorization, coins) {
     }
 }
 
-async function main() {
+async function main_noproxy() {
     const clearTask = readlineSync.question("Auto Complete Task? (y/n): ").trim().toLowerCase() || 'n';
     const credentials = loadCredentials();
     const nUpgrade = autoUpgradeDailyAttempt(); 
@@ -312,4 +312,4 @@ async function main() {
     }
 }
 
-main();
+main_noproxy();
