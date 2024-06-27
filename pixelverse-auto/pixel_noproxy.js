@@ -2,7 +2,6 @@ const axios = require('axios');
 const readline = require('readline');
 const moment = require('moment');
 const fs = require('fs');
-const { HttpsProxyAgent } = require('https-proxy-agent');
 
 const headers = {
     'accept': 'application/json, text/plain, */*',
@@ -20,37 +19,23 @@ const headers = {
     'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
 };
 
-const getUserData = async (queryData, proxy) => {
+const getUserData = async (queryData) => {
     const url = 'https://api-clicker.pixelverse.xyz/api/users';
     headers['initdata'] = queryData;
     try {
-        const response = await axios.get(url, { headers, httpsAgent: new HttpsProxyAgent(proxy) });
+        const response = await axios.get(url, { headers });
         return response.data;
     } catch (error) {
         console.error(`Lỗi rồi: ${error.message}`);
         return null;
     }
 };
-const checkProxyIP = async (proxy) => {
-    try {
-        const proxyAgent = new HttpsProxyAgent(proxy);
-        const response = await axios.get('https://api.ipify.org?format=json', {
-            httpsAgent: proxyAgent
-        });
-        if (response.status === 200) {
-            console.log('\nĐịa chỉ IP của proxy là:', response.data.ip);
-        } else {
-            console.error('Không thể kiểm tra IP của proxy. Status code:', response.status);
-        }
-    } catch (error) {
-        console.error('Error khi kiểm tra IP của proxy:', error);
-    }
-};
-const getProgress = async (queryData, proxy) => {
+
+const getProgress = async (queryData) => {
     const url = 'https://api-clicker.pixelverse.xyz/api/mining/progress';
     headers['initdata'] = queryData;
     try {
-        const response = await axios.get(url, { headers, httpsAgent: new HttpsProxyAgent(proxy) });
+        const response = await axios.get(url, { headers });
         return response.data;
     } catch (error) {
         console.error(`Lỗi rồi: ${error.message}`);
@@ -58,11 +43,11 @@ const getProgress = async (queryData, proxy) => {
     }
 };
 
-const getPetsData = async (queryData, proxy) => {
+const getPetsData = async (queryData) => {
     const url = 'https://api-clicker.pixelverse.xyz/api/pets';
     headers['initdata'] = queryData;
     try {
-        const response = await axios.get(url, { headers, httpsAgent: new HttpsProxyAgent(proxy) });
+        const response = await axios.get(url, { headers });
         return response.data;
     } catch (error) {
         console.error(`Lỗi rồi: ${error.message}`);
@@ -70,11 +55,11 @@ const getPetsData = async (queryData, proxy) => {
     }
 };
 
-const claimBalance = async (queryData, proxy) => {
+const claimBalance = async (queryData) => {
     const url = 'https://api-clicker.pixelverse.xyz/api/mining/claim';
     headers['initdata'] = queryData;
     try {
-        const response = await axios.post(url, {}, { headers, httpsAgent: new HttpsProxyAgent(proxy) });
+        const response = await axios.post(url, {}, { headers });
         return response.data;
     } catch (error) {
         console.error(`Lỗi rồi: ${error.message}`);
@@ -110,6 +95,8 @@ const animatedLoading = (durationInMilliseconds) => {
 
 const printWelcomeMessage = () => {
     console.log("==============================================================");
+    console.log("Tải tool auto miễn phí tại kênh tele Dân Cày Airdrop");
+    console.log("Link: https://t.me/dancayairdrop");
     console.log("==============================================================");
     const currentTime = moment();
     const upTime = moment.duration(currentTime.diff(startTime));
@@ -120,8 +107,8 @@ const printWelcomeMessage = () => {
     console.log(`Thời gian bot đã chạy: ${days} Ngày, ${hours} giờ, ${minutes} phút, ${seconds} giây\n\n`);
 };
 
-const upgradePetIfNeeded = async (queryData, maxLevel, proxy) => {
-    const petsData = await getPetsData(queryData, proxy);
+const upgradePetIfNeeded = async (queryData, maxLevel) => {
+    const petsData = await getPetsData(queryData);
     if (petsData) {
         for (const pet of petsData.data) {
             const currentLevel = pet.userPet.level;
@@ -130,7 +117,7 @@ const upgradePetIfNeeded = async (queryData, maxLevel, proxy) => {
                 const upgradeUrl = `https://api-clicker.pixelverse.xyz/api/pets/user-pets/${petId}/level-up`;
                 try {
                     headers['initdata'] = queryData;
-                    const upgradeResponse = await axios.post(upgradeUrl, {}, { headers, httpsAgent: new HttpsProxyAgent(proxy) });
+                    const upgradeResponse = await axios.post(upgradeUrl, {}, { headers });
                     console.log(`\r[ Upgrade Pet ] : ${pet.name} đã nâng cấp thành công lên Lv. ${currentLevel + 1}`);
                 } catch (error) {
                     console.error(`\r[ Upgrade Pet ] : Nâng cấp pet không thành công ${pet.name}: ${error.message}`);
@@ -144,11 +131,11 @@ const upgradePetIfNeeded = async (queryData, maxLevel, proxy) => {
     }
 };
 
-const checkDailyRewards = async (queryData, proxy) => {
+const checkDailyRewards = async (queryData) => {
     const url = 'https://api-clicker.pixelverse.xyz/api/daily-rewards';
     headers['initdata'] = queryData;
     try {
-        const response = await axios.get(url, { headers, httpsAgent: new HttpsProxyAgent(proxy) });
+        const response = await axios.get(url, { headers });
         const data = response.data;
         const totalClaimed = data.totalClaimed;
         const day = data.day;
@@ -158,7 +145,7 @@ const checkDailyRewards = async (queryData, proxy) => {
         console.log(`\r[ Daily Reward ] : Day ${day} Amount ${rewardAmount} | Status: ${statusKlaim} | Total Claimed: ${totalClaimed}`);
         if (todaysRewardAvailable) {
             console.log(`\r[ Daily Reward ] : Bắt đầu claim...`);
-            await claimDailyReward(queryData, proxy);
+            await claimDailyReward(queryData);
         }
         return data;
     } catch (error) {
@@ -167,11 +154,11 @@ const checkDailyRewards = async (queryData, proxy) => {
     }
 };
 
-const claimDailyReward = async (queryData, proxy) => {
+const claimDailyReward = async (queryData) => {
     const url = 'https://api-clicker.pixelverse.xyz/api/daily-rewards/claim';
     headers['initdata'] = queryData;
     try {
-        const response = await axios.post(url, {}, { headers, httpsAgent: new HttpsProxyAgent(proxy) });
+        const response = await axios.post(url, {}, { headers });
         const data = response.data;
         const day = data.day;
         const amount = data.amount;
@@ -184,10 +171,10 @@ const claimDailyReward = async (queryData, proxy) => {
 };
 
 
-const claimDailyCombo = async (queryData, userInputOrder, proxy) => {
+const claimDailyCombo = async (queryData, userInputOrder) => {
     try {
         headers['initdata'] = queryData;
-        const response = await axios.get('https://api-clicker.pixelverse.xyz/api/cypher-games/current', { headers, httpsAgent: new HttpsProxyAgent(proxy) });
+        const response = await axios.get('https://api-clicker.pixelverse.xyz/api/cypher-games/current', { headers });
         if (response.status === 200) {
             const data = response.data;
             const comboId = data.id;
@@ -204,7 +191,7 @@ const claimDailyCombo = async (queryData, userInputOrder, proxy) => {
                 }
             });
             console.log(`\r[ Daily Combo ] : Đang pick pet...`);
-            const answerResponse = await axios.post(`https://api-clicker.pixelverse.xyz/api/cypher-games/${comboId}/answer`, requestData, { headers, httpsAgent: new HttpsProxyAgent(proxy) });
+            const answerResponse = await axios.post(`https://api-clicker.pixelverse.xyz/api/cypher-games/${comboId}/answer`, requestData, { headers });
             if (answerResponse.status !== 400) {
                 const answerData = answerResponse.data;
                 const jumlah = answerData.rewardAmount;
@@ -230,18 +217,15 @@ const claimDailyCombo = async (queryData, userInputOrder, proxy) => {
     }
 };
 
-const main = async () => {
+const pixel_noproxy = async () => {
     const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout
     });
 
-    const question = (query) => new Promise((resolve) => rl.question(query, resolve));
-
     const autoUpgradePet = 'y';
     let maxLevelPet = 10;
-
-    const autoDailyCombo = 'y';
+    const autoDailyCombo = 'n';
     let userInputOrder = [];
 
     rl.close();
@@ -250,15 +234,11 @@ const main = async () => {
         printWelcomeMessage();
         try {
             const queries = fs.readFileSync('query.txt', 'utf-8').split('\n').map(line => line.trim());
-            const proxies = fs.readFileSync('proxy.txt', 'utf-8').split('\n').map(line => line.trim());
 
             for (let i = 0; i < queries.length; i++) {
                 const queryData = queries[i];
-                const proxy = proxies[i % proxies.length];
 
-                await checkProxyIP(proxy);
-
-                const userResponse = await getUserData(queryData, proxy);
+                const userResponse = await getUserData(queryData);
 
                 if (userResponse) {
                     const username = userResponse.username || "Không có tên người dùng";
@@ -271,7 +251,7 @@ const main = async () => {
                     console.log(`[ Active Pet ] : ${petDetails}`);
                     console.log(`[ Pets ] : Lấy dữ liệu pet...`);
 
-                    const petsData = await getPetsData(queryData, proxy);
+                    const petsData = await getPetsData(queryData);
                     if (petsData) {
                         petsData.data.forEach(pet => {
                             const petLevel = pet.userPet.level;
@@ -283,10 +263,10 @@ const main = async () => {
 
                     if (autoUpgradePet === 'y') {
                         console.log(`[ Upgrade Pet ] : Nâng cấp pet`);
-                        await upgradePetIfNeeded(queryData, maxLevelPet, proxy);
+                        await upgradePetIfNeeded(queryData, maxLevelPet);
                     }
 
-                    const cekProgress = await getProgress(queryData, proxy);
+                    const cekProgress = await getProgress(queryData);
                     if (cekProgress) {
                         const data = cekProgress;
                         const maxCoin = data.maxAvailable.toLocaleString('id-ID');
@@ -299,7 +279,7 @@ const main = async () => {
                         console.log(`[ Progress ] : Khôi phục tốc độ: ${restoreSpeed}`);
                         console.log(`[ Claim ] : Bắt đầu claim...`);
 
-                        const claim = await claimBalance(queryData, proxy);
+                        const claim = await claimBalance(queryData);
                         if (claim) {
                             const claimedAmount = claim.claimedAmount || 0;
                             const amount = claimedAmount.toLocaleString('id-ID');
@@ -312,10 +292,10 @@ const main = async () => {
                     }
 
                     console.log(`[ Daily Reward ] : Kiểm tra...`);
-                    await checkDailyRewards(queryData, proxy);
+                    await checkDailyRewards(queryData);
 
                     if (autoDailyCombo === 'y') {
-                        await claimDailyCombo(queryData, userInputOrder, proxy);
+                        await claimDailyCombo(queryData, userInputOrder);
                     }
                 } else {
                     console.error(`\n======= Truy vấn sai =======`);
@@ -333,5 +313,5 @@ const main = async () => {
 const startTime = moment();
 
 if (require.main === module) {
-    main();
+    pixel_noproxy();
 }
