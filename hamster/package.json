@@ -2,14 +2,16 @@
   "name": "hamster",
   "version": "1.0.0",
   "description": "",
-  "main": "main.js",
+  "main": "main_noproxy.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start" : "node main.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "axios": "^1.7.2"
+    "axios": "^1.7.2",
+    "https-proxy-agent": "^7.0.4"
   }
 }
