@@ -17,31 +17,38 @@ func main() {
 	}
 
 	tokens := (viper.Get("data.tokens")).([]interface{})
+	proxies := viper.GetStringSlice("proxies.data")
 
-	for _, token := range tokens {
-		go collect(token.(string))
+	for i, token := range tokens {
+		proxy := proxies[i%len(proxies)]
+
+		go collect(token.(string), proxy)
 	}
 	select {}
 
 }
 
-func collect(query string) {
+func collect(query string, proxy string) {
 	client := resty.New()
 	for {
 		var authResponse request.AuthResponse
-		res, err := client.R().
+		res, err := client.
+			SetProxy(proxy).
+			R().
 			SetBody(query).
 			SetResult(&authResponse).
 			Post(constant.AuthAPI)
 		if err != nil {
 			fmt.Println("Get auth err: ", err)
 			time.Sleep(5 * time.Minute)
-			go collect(query)
+			go collect(query, proxy)
 			return
 		}
 		token := authResponse.Token
 
-		res, err = client.R().
+		res, err = client.
+			SetProxy(proxy).
+			R().
 			SetAuthToken(token).
 			SetBody(`{}`).
 			Post(constant.FinishAPI)
@@ -52,14 +59,16 @@ func collect(query string) {
 		}
 		fmt.Println("Finish api", res)
 
-		res, err = client.R().
+		res, err = client.
+			SetProxy(proxy).
+			R().
 			SetAuthToken(token).
 			SetBody(`{}`).
 			Post(constant.StartAPI)
 		if err != nil {
 			fmt.Println("Start api err: ", err)
 			time.Sleep(5 * time.Minute)
-			go collect(query)
+			go collect(query, proxy)
 			return
 		}
 		fmt.Println("Start api", res)
