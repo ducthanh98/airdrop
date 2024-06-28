@@ -1,206 +1,159 @@
 const axios = require('axios');
 const fs = require('fs');
+const path = require('path');
 const { HttpsProxyAgent } = require('https-proxy-agent');
-const readline = require('readline');
 
-const csvDataAuth = fs.readFileSync('query.txt', 'utf8');
-const authorizationList = csvDataAuth.split('\n').map(line => line.trim()).filter(line => line !== '');
-const dieukien = 500000;
-const csvDataProxy = fs.readFileSync('proxy.txt', 'utf8');
-const proxyList = csvDataProxy.split('\n').map(line => line.trim()).filter(line => line !== '');
+const proxyFilePath = path.join(__dirname, 'proxy.txt');
+const proxies = fs.readFileSync(proxyFilePath, 'utf8').trim().split('\n');
 
-function createAxiosInstance(proxy) {
-    const proxyAgent = new HttpsProxyAgent(proxy);
-    return axios.create({
-        baseURL: 'https://api.hamsterkombat.io',
-        timeout: 10000,
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        httpsAgent: proxyAgent
-    });
-}
+const csvData = fs.readFileSync('query.txt', 'utf8');
+const authorizationList = csvData.split('\n').map(line => line.trim()).filter(line => line !== '');
 
-async function checkProxyIP(proxy) {
+const dancay = axios.create({
+    baseURL: 'https://api.hamsterkombat.io',
+    timeout: 10000,
+    headers: {
+        'Content-Type': 'application/json'
+    },
+});
+
+async function clickWithAPI(authorization, proxyAgent) {
     try {
-        const proxyAgent = new HttpsProxyAgent(proxy);
-        const response = await axios.get('https://api.ipify.org?format=json', {
-            httpsAgent: proxyAgent 
-        });
-        if (response.status === 200) {
-            console.log('Địa chỉ IP của proxy là:', response.data.ip);
-        } else {
-            console.error('Không thể kiểm tra IP của proxy. Status code:', response.status);
-        }
-    } catch (error) {
-        console.error('Error khi kiểm tra IP của proxy:', error);
-    }
-}
+        const payload = {
+            count: 1,
+            availableTaps: 1500,
+            timestamp: Date.now()
+        };
 
-async function getBalanceCoins(dancay, authorization) {
-    try {
-        const response = await dancay.post('/clicker/sync', {}, {
+        const response = await dancay.post('/clicker/tap', payload, {
             headers: {
                 'Authorization': `Bearer ${authorization}`
-            }
+            },
+            httpsAgent: proxyAgent
         });
 
         if (response.status === 200) {
-            return response.data.clickerUser.balanceCoins;
+            const data = response.data;
+            const clickerUser = data.clickerUser;
+            const requiredFields = {
+                Balance: clickerUser.balanceCoins,
+                Level: clickerUser.level,
+                availableTaps: clickerUser.availableTaps,
+                maxTaps: clickerUser.maxTaps
+            };
+            console.log('Đang tap:', requiredFields);
+            return requiredFields;
         } else {
-            console.error('Không lấy được thông tin balanceCoins. Status code:', response.status);
-            return null;
+            console.error('Không bấm được. Status code:', response.status);
         }
     } catch (error) {
         console.error('Error:', error);
-        return null;
     }
+    return null;
 }
 
-async function buyUpgrades(dancay, authorization) {
+async function checkTasks(authorization, proxyAgent) {
     try {
-        const upgradesResponse = await dancay.post('/clicker/upgrades-for-buy', {}, {
+        const response = await dancay.post('/clicker/list-tasks', {}, {
             headers: {
                 'Authorization': `Bearer ${authorization}`
-            }
+            },
+            httpsAgent: proxyAgent
         });
 
-        if (upgradesResponse.status === 200) {
-            const upgrades = upgradesResponse.data.upgradesForBuy;
-            let balanceCoins = await getBalanceCoins(dancay, authorization);
-            let purchased = false;
-
-            for (const upgrade of upgrades) {
-                if (upgrade.cooldownSeconds > 0) {
-                    console.log(`Thẻ ${upgrade.name} đang trong thời gian cooldown ${upgrade.cooldownSeconds} giây.`);
-                    continue; 
-                }
-
-                if (upgrade.isAvailable && !upgrade.isExpired && upgrade.price < dieukien && upgrade.price <= balanceCoins) {
-                    const buyUpgradePayload = {
-                        upgradeId: upgrade.id,
-                        timestamp: Math.floor(Date.now() / 1000)
-                    };
-                    try {
-                        const response = await dancay.post('/clicker/buy-upgrade', buyUpgradePayload, {
-                            headers: {
-                                'Authorization': `Bearer ${authorization}`
-                            }
-                        });
-                        if (response.status === 200) {
-                            console.log(`(${Math.floor(balanceCoins)}) Đã nâng cấp thẻ ${upgrade.name} cho token ${authorization}.`);
-                            purchased = true;
-                            balanceCoins -= upgrade.price; 
-                        }
-                    } catch (error) {
-                        if (error.response && error.response.data && error.response.data.error_code === 'UPGRADE_COOLDOWN') {
-                            console.log(`Thẻ ${upgrade.name} đang trong thời gian cooldown ${error.response.data.cooldownSeconds} giây.`);
-                            continue; 
-                        } else {
-                            throw error;
-                        }
-                    }
-                    await new Promise(resolve => setTimeout(resolve, 1000)); 
+        if (response.status === 200) {
+            const tasks = response.data.tasks;
+            for (const task of tasks) {
+                if (task.id === 'streak_days' && !task.isCompleted) {
+                    await dancay.post('/clicker/check-task', { taskId: 'streak_days' }, {
+                        headers: {
+                            'Authorization': `Bearer ${authorization}`
+                        },
+                        httpsAgent: proxyAgent
+                    });
+                    console.log(`Đã điểm danh hàng ngày cho token ${authorization}`);
                 }
             }
 
-            if (!purchased) {
-                console.log(`Token ${authorization.substring(0, 10)}... không có thẻ nào khả dụng hoặc đủ điều kiện. Chuyển token tiếp theo...`);
-                return false;
-            }
-        } else {
-            console.error('Không lấy được danh sách thẻ. Status code:', upgradesResponse.status);
-            return false;
-        }
-    } catch (error) {
-        console.error('Lỗi không mong muốn, chuyển token tiếp theo');
-        return false;
-    }
-    return true;
-}
-
-async function claimDailyCipher(dancay, authorization, cipher) {
-    if (cipher) {
-        try {
-            const payload = {
-                cipher: cipher
-            };
-            const response = await dancay.post('/clicker/claim-daily-cipher', payload, {
+            const boostsResponse = await dancay.post('/clicker/boosts-for-buy', {}, {
                 headers: {
                     'Authorization': `Bearer ${authorization}`
-                }
+                },
+                httpsAgent: proxyAgent
             });
 
-            if (response.status === 200) {
-                console.log(`Đã giải mã morse ${cipher} cho token ${authorization}`);
+            if (boostsResponse.status === 200 && boostsResponse.data.boostsForBuy) {
+                const boosts = boostsResponse.data.boostsForBuy;
+                const boostFullAvailableTaps = boosts.find(boost => boost.id === 'BoostFullAvailableTaps');
+                if (boostFullAvailableTaps && boostFullAvailableTaps.cooldownSeconds === 0) {
+                    const buyBoostPayload = {
+                        boostId: 'BoostFullAvailableTaps',
+                        timestamp: Math.floor(Date.now() / 1000)
+                    };
+                    await dancay.post('/clicker/buy-boost', buyBoostPayload, {
+                        headers: {
+                            'Authorization': `Bearer ${authorization}`
+                        },
+                        httpsAgent: proxyAgent
+                    });
+                    console.log(`Đã mua Full Energy cho token ${authorization}`);
+                }
             } else {
-                console.error('Không claim được daily cipher. Status code:', response.status);
+                console.error('Không lấy được danh sách boosts. Status code:', boostsResponse.status);
             }
-        } catch (error) {
-            console.error('Error:', error.message || error);
+        } else {
+            console.error('Không lấy được danh sách nhiệm vụ. Status code:', response.status);
         }
+    } catch (error) {
+        console.error('Error:', error);
     }
 }
 
-async function runForAuthorization(authorization, proxy, cipher) {
-    const dancay = createAxiosInstance(proxy);
-    await checkProxyIP(proxy);
-
-    await claimDailyCipher(dancay, authorization, cipher);
+async function runForAuthorization(authorization,proxyAgent) {
+    await checkTasks(authorization,proxyAgent);
 
     while (true) {
-        const success = await buyUpgrades(dancay, authorization);
-        if (!success) {
+        const requests = Array.from({ length: 5 }, () => clickWithAPI(authorization));
+        const results = await Promise.all(requests);
+        const clickData = results[results.length - 1];
+        if (clickData && clickData.availableTaps < 10) {
+            console.log(`Token ${authorization.substring(0, 10)}... có năng lượng nhỏ hơn 10. Chuyển token tiếp theo...`);
             break;
         }
+        await new Promise(resolve => setTimeout(resolve, 10));
     }
 }
 
-async function askForUpgrade() {
-    const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout
-    });
 
-    return new Promise(resolve => {
-        rl.question('Có nâng cấp thẻ không? (y/n): ', (answer) => {
-            rl.close();
-            resolve(answer.trim().toLowerCase() === 'y');
+const checkProxyIP = async (token,proxy) => {
+    try {
+        const response = await axios.get('https://api.ipify.org?format=json', {
+            httpsAgent: proxy
         });
-    });
-}
-
-async function askForCipher() {
-    const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout
-    });
-
-    return new Promise(resolve => {
-        rl.question('Mã morse hôm nay cần giải: ', (answer) => {
-            rl.close();
-            resolve(answer.trim().toUpperCase());
-        });
-    });
-}
+        if (response.status === 200) {
+            console.log(`token ${token} takes:`, response.data.ip);
+        } else {
+            console.error('Check proxy ip error. Status code:', response.status);
+        }
+    } catch (error) {
+        console.error('Check proxy error:', error);
+    }
+};
 
 async function main() {
-    const shouldUpgrade = 'y';
-    const cipher = '';
+    while (true) {
+        for (let i = 0; i < authorizationList.length; i++) {
+            console.log('==================START==================')
+            const proxy = proxies[i % proxies.length].trim()
+            const proxyAgent = new HttpsProxyAgent(proxy)
+            await checkProxyIP(authorizationList[i],proxyAgent)
+            await runForAuthorization(authorizationList[i],proxyAgent);
+            console.log('==================END==================')
 
-    for (let i = 0; i < authorizationList.length; i++) {
-        const authorization = authorizationList[i];
-        const proxy = proxyList[i % proxyList.length];
-
-        if (shouldUpgrade) { 
-            await runForAuthorization(authorization, proxy, cipher);
-        } else { 
-            const dancay = createAxiosInstance(proxy);
-            await checkProxyIP(proxy);
-            await claimDailyCipher(dancay, authorization, cipher);
         }
+        console.log('Đã chạy xong tất cả các token, nghỉ 1 giây rồi chạy lại từ đầu...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
     }
-    console.log('Đã chạy xong tất cả các token.');
 }
 
 main();

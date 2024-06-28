@@ -5,7 +5,7 @@
   "main": "main_noproxy.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start" : "node main.js"
+    "start" : "node upgrade.js"
   },
   "keywords": [],
   "author": "",
