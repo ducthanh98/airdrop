@@ -8,4 +8,4 @@ RUN npm install
 
 COPY . /app
 
-CMD [ "node", "pixel.js" ]
+CMD [ "node", "combat-proxy.js" ]
