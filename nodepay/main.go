@@ -42,7 +42,7 @@ func main() {
 			fmt.Println(proxyURL, "Can't get public ip")
 		}
 
-		go pingNetworkDevice(token, proxyURL, publicIp.IP)
+		//go pingNetworkDevice(token, proxyURL, publicIp.IP)
 
 		go connectSocket(token, proxyURL, publicIp.IP)
 	}
@@ -81,7 +81,11 @@ func connectSocket(token string, proxyURL string, ip string) {
 
 		conn, err := net.Dial("tcp", proxy.Host)
 		if err != nil {
-			panic(err)
+			fmt.Println("Dial error", err)
+			log.Println(" Reconnecting after a minute")
+			time.Sleep(1 * time.Minute)
+			go connectSocket(token, proxyURL, ip)
+			return
 		}
 		defer conn.Close()
 
@@ -101,29 +105,49 @@ func connectSocket(token string, proxyURL string, ip string) {
 
 		err = connectReq.Write(conn)
 		if err != nil {
-			panic(err)
+			fmt.Println("Write connect error", err)
+			log.Println(" Reconnecting after a minute")
+			time.Sleep(1 * time.Minute)
+			go connectSocket(token, proxyURL, ip)
+			return
 		}
 
 		resp, err := http.ReadResponse(bufio.NewReader(conn), connectReq)
 		if err != nil {
-			panic(err)
+			fmt.Println("Read response err", err)
+			log.Println(" Reconnecting after a minute")
+			time.Sleep(1 * time.Minute)
+			go connectSocket(token, proxyURL, ip)
+			return
 		}
 		if resp.StatusCode != http.StatusOK {
-			panic(fmt.Errorf("Proxy CONNECT failed with status: %s", resp.Status))
+			fmt.Println("Proxy CONNECT failed with status:", resp.Status)
+			log.Println(" Reconnecting after a minute")
+			time.Sleep(1 * time.Minute)
+			go connectSocket(token, proxyURL, ip)
+			return
 		}
 
 		// Use the resulting connection as a WebSocket connection
 		wsCon, resp, err := websocket.NewClient(conn, ws, nil, 1024, 1024)
 		if err != nil {
 			log.Printf("Init ws failed with status %d", resp.StatusCode)
-			log.Fatal("dial:", err)
+			log.Println("dial:", err)
+			log.Println(" Reconnecting after a minute")
+			time.Sleep(1 * time.Minute)
+			go connectSocket(token, proxyURL, ip)
+			return
 		}
 		c = wsCon
 	} else {
 		wsCon, resp, err := websocket.DefaultDialer.Dial(constant.BASE_WSS, nil)
 		if err != nil {
 			log.Printf("Init ws failed with status %d", resp.StatusCode)
-			log.Fatal("dial:", err)
+			log.Println("dial:", err)
+			log.Println(" Reconnecting after a minute")
+			time.Sleep(1 * time.Minute)
+			go connectSocket(token, proxyURL, ip)
+			return
 		}
 		c = wsCon
 	}
@@ -206,13 +230,12 @@ func pingNetworkDevice(token, proxyURL string, ip string) {
 
 	for {
 
-		res, err := client.R().
+		_, err := client.R().
 			SetAuthToken(token).
 			Get(fmt.Sprintf("%v/network/device-network?ip=%v", constant.BASE_URL, ip))
 		if err != nil {
-			log.Println("Can't ping device")
+			log.Println("Can't check device network", err)
 		}
-		fmt.Println("res", res)
 
 		time.Sleep(3 * time.Second)
 	}
