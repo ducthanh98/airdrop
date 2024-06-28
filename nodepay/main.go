@@ -29,29 +29,16 @@ func main() {
 	proxies := viper.GetStringSlice("data.proxies")
 
 	for _, proxyURL := range proxies {
-		client := resty.New()
-		if proxyURL != "" {
-			client.SetProxy(proxyURL)
-		}
-		var publicIp *request.GetIPResponse
-
-		_, err = client.R().
-			SetResult(&publicIp).
-			Get("https://api.ipify.org?format=json")
-		if err != nil {
-			fmt.Println(proxyURL, "Can't get public ip")
-		}
-
 		//go pingNetworkDevice(token, proxyURL, publicIp.IP)
 
-		go connectSocket(token, proxyURL, publicIp.IP)
+		go connectSocket(token, proxyURL)
 	}
 
 	select {}
 
 }
 
-func connectSocket(token string, proxyURL string, ip string) {
+func connectSocket(token string, proxyURL string) {
 	client := resty.New()
 	if proxyURL != "" {
 		client.SetProxy(proxyURL)
@@ -63,7 +50,11 @@ func connectSocket(token string, proxyURL string, ip string) {
 		SetAuthToken(token).
 		Post(fmt.Sprintf("%v/auth/session", constant.BASE_URL))
 	if err != nil {
-		panic(err)
+		fmt.Println("Auth session err", err)
+		log.Println(" Reconnecting after a minute")
+		time.Sleep(1 * time.Minute)
+		go connectSocket(token, proxyURL)
+		return
 	}
 
 	var c *websocket.Conn
@@ -84,7 +75,7 @@ func connectSocket(token string, proxyURL string, ip string) {
 			fmt.Println("Dial error", err)
 			log.Println(" Reconnecting after a minute")
 			time.Sleep(1 * time.Minute)
-			go connectSocket(token, proxyURL, ip)
+			go connectSocket(token, proxyURL)
 			return
 		}
 		defer conn.Close()
@@ -108,7 +99,7 @@ func connectSocket(token string, proxyURL string, ip string) {
 			fmt.Println("Write connect error", err)
 			log.Println(" Reconnecting after a minute")
 			time.Sleep(1 * time.Minute)
-			go connectSocket(token, proxyURL, ip)
+			go connectSocket(token, proxyURL)
 			return
 		}
 
@@ -117,14 +108,14 @@ func connectSocket(token string, proxyURL string, ip string) {
 			fmt.Println("Read response err", err)
 			log.Println(" Reconnecting after a minute")
 			time.Sleep(1 * time.Minute)
-			go connectSocket(token, proxyURL, ip)
+			go connectSocket(token, proxyURL)
 			return
 		}
 		if resp.StatusCode != http.StatusOK {
 			fmt.Println("Proxy CONNECT failed with status:", resp.Status)
 			log.Println(" Reconnecting after a minute")
 			time.Sleep(1 * time.Minute)
-			go connectSocket(token, proxyURL, ip)
+			go connectSocket(token, proxyURL)
 			return
 		}
 
@@ -135,7 +126,7 @@ func connectSocket(token string, proxyURL string, ip string) {
 			log.Println("dial:", err)
 			log.Println(" Reconnecting after a minute")
 			time.Sleep(1 * time.Minute)
-			go connectSocket(token, proxyURL, ip)
+			go connectSocket(token, proxyURL)
 			return
 		}
 		c = wsCon
@@ -146,7 +137,7 @@ func connectSocket(token string, proxyURL string, ip string) {
 			log.Println("dial:", err)
 			log.Println(" Reconnecting after a minute")
 			time.Sleep(1 * time.Minute)
-			go connectSocket(token, proxyURL, ip)
+			go connectSocket(token, proxyURL)
 			return
 		}
 		c = wsCon
@@ -159,12 +150,12 @@ func connectSocket(token string, proxyURL string, ip string) {
 			log.Println("Read message error:", err)
 			time.Sleep(1 * time.Minute)
 			log.Println("Error. Reconnecting after a minute")
-			go connectSocket(token, proxyURL, ip)
+			go connectSocket(token, proxyURL)
 			return
 		}
 		var msg *request.WsMessage
 		json.Unmarshal(payload, &msg)
-		log.Printf("%v: recv: %s", ip, msg)
+		log.Printf("recv: %s", msg)
 		if msg.Action == "AUTH" {
 			sendAuth(msg, token, c, authSessionResponse)
 		} else if msg.Action == "PONG" {
@@ -222,7 +213,7 @@ func sendAuth(msg *request.WsMessage, token string, c *websocket.Conn, authSessi
 	}
 }
 
-func pingNetworkDevice(token, proxyURL string, ip string) {
+func pingNetworkDevice(token, proxyURL string) {
 	client := resty.New()
 	if proxyURL != "" {
 		client.SetProxy(proxyURL)
@@ -232,7 +223,7 @@ func pingNetworkDevice(token, proxyURL string, ip string) {
 
 		_, err := client.R().
 			SetAuthToken(token).
-			Get(fmt.Sprintf("%v/network/device-network?ip=%v", constant.BASE_URL, ip))
+			Get(fmt.Sprintf("%v/network/device-network?ip=%v", constant.BASE_URL))
 		if err != nil {
 			log.Println("Can't check device network", err)
 		}
