@@ -1,5 +1,7 @@
 package request
 
+import "time"
+
 type AuthResponse struct {
 	Token             string              `json:"token"`
 	Info              Info                `json:"info"`
@@ -28,4 +30,20 @@ type Referral struct {
 type BalanceInfo struct {
 	Balance  int      `json:"balance"`
 	Referral Referral `json:"referral"`
+}
+
+type Task []struct {
+	Submission  *Submission `json:"submission,omitempty"`
+	ID          string      `json:"id"`
+	Title       string      `json:"title"`
+	URL         string      `json:"url"`
+	Type        string      `json:"type"`
+	Description string      `json:"description"`
+	Reward      int         `json:"reward"`
+	ChatID      string      `json:"chatId,omitempty"`
+}
+type Submission struct {
+	Reward    int       `json:"reward"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"createdAt"`
 }
