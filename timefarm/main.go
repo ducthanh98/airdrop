@@ -87,8 +87,19 @@ func checkTask(queries, proxies []string) {
 
 				}
 			}
+			time.Sleep(10 * time.Second)
+
+			res, err = client.
+				R().
+				SetAuthToken(token).
+				SetBody(`{}`).
+				SetResult(&tasks).
+				Post(fmt.Sprintf(constant.UpgradeTimeAPI))
+			fmt.Println("Account idx", i, "try to upgrade time: ", res)
+			time.Sleep(20 * time.Second)
 		}
 
+		fmt.Println("All done. Wait 2 hours")
 		time.Sleep(2 * time.Hour)
 	}
 
