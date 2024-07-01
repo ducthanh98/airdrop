@@ -234,6 +234,7 @@ async function xuly(queryId, proxy, progress) {
                 progress.update({ status: `Lỗi khi gọi API claimDailyReward: ${error.response ? error.response.data : error.message}` });
             }
         }
+        progress.update(100, { status: 'Hoàn thành' });
 
     } catch (error) {
         progress.update({ status: `Lỗi: ${error.message}` });
@@ -263,7 +264,6 @@ async function runTasks() {
 
         return (async () => {
             await xuly(queryId, proxy, progress);
-            progress.update(100, { status: 'Hoàn thành' });
             progress.stop();
         })();
     });
