@@ -42,5 +42,5 @@ This guide provides step-by-step instructions on how to create a `query.txt` fil
 
 ```txt
 query_id=AAFp24QjBBBBBBBGnbhCMPl2ic&user=%7B%22id%22%3A595123123%2C%22first_name%22%3A%22TTest%22%2C%22last_name%22%3A%22%22%2C%22username%22%3A%22mu_user_name%22%2C%22language_code%22%3A%22en%22%2C%22allows_write_to_pm%22%3Atrue%7D&auth_date=1720004644&hash=17254717cee123123123e789cfac828062123123123fc3df090f8cc6609c3e
-
-![alt text](image.png)
+````
+![alt text](.github/images/query_id.png)
