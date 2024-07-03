@@ -21,10 +21,7 @@ def load_proxies(file_path='proxy.txt'):
         proxies = file.readlines()
     return [proxy.strip() for proxy in proxies]
 
-async def check_proxy(proxy, proxy_check_results):
-    if proxy in proxy_check_results:
-        return proxy_check_results[proxy]
-    
+async def check_proxy(proxy):
     test_url = "https://httpbin.org/ip"  
     try:
         async with aiohttp.ClientSession() as session:
@@ -32,18 +29,15 @@ async def check_proxy(proxy, proxy_check_results):
                 if response.status == 200:
                     data = await response.json()
                     ip = data['origin']
-                    proxy_check_results[proxy] = ip
                     return ip
                 else:
                     print(f"❌ Proxy {proxy} không khả dụng. Trạng thái: {response.status}")
-                    proxy_check_results[proxy] = None
                     return None
     except Exception as e:
         print(f"❌ Proxy {proxy} không khả dụng. Lỗi: {e}")
-        proxy_check_results[proxy] = None
         return None
-async def fetch(account_line, proxy, proxy_check_results):
-    proxy_ip = await check_proxy(proxy, proxy_check_results)
+async def fetch(account_line, proxy):
+    proxy_ip = await check_proxy(proxy)
     if not proxy_ip:
         print(f"❌ Không thể sử dụng proxy {proxy}.")
         return None
@@ -98,8 +92,8 @@ async def fetch(account_line, proxy, proxy_check_results):
                 print("Không thể giải mã JSON")
                 return None, None
 
-async def check_user(index, proxy, proxy_check_results):
-    result = await fetch(index + 1, proxy, proxy_check_results)
+async def check_user(index, proxy):
+    result = await fetch(index + 1, proxy)
     if not result:
         return None, None
 
@@ -131,8 +125,8 @@ async def check_user(index, proxy, proxy_check_results):
                 print(f"❌ Lỗi với trạng thái {response.status}, thử lại...")
                 return None, None
 
-async def activate_energy_recharge_booster(index, headers, proxy, proxy_check_results):
-    result = await fetch(index + 1, proxy, proxy_check_results)
+async def activate_energy_recharge_booster(index, headers, proxy):
+    result = await fetch(index + 1, proxy)
     if not result:
         return None
 
@@ -162,8 +156,8 @@ async def activate_energy_recharge_booster(index, headers, proxy, proxy_check_re
                 print(f"❌ Gặp sự cố với mã trạng thái {response.status}, thử lại...")
                 return None 
 
-async def activate_booster(index, headers, proxy, proxy_check_results):
-    result = await fetch(index + 1, proxy, proxy_check_results)
+async def activate_booster(index, headers, proxy):
+    result = await fetch(index + 1, proxy)
     if not result:
         return None
 
@@ -187,7 +181,7 @@ async def activate_booster(index, headers, proxy, proxy_check_results):
                 current_health = response_data['data']['telegramGameActivateBooster']['currentBoss']['currentHealth']
                 if current_health == 0:
                     print("\nBoss đã bị hạ gục, chuyển boss tiếp theo...")
-                    await set_next_boss(index, headers, proxy, proxy_check_results)
+                    await set_next_boss(index, headers, proxy)
                 else:
                     total_hit = 3000
                     tap_payload = {
@@ -201,13 +195,13 @@ async def activate_booster(index, headers, proxy, proxy_check_results):
                         "query": MUTATION_GAME_PROCESS_TAPS_BATCH
                     }
                     for _ in range(25):
-                        tap_result = await submit_taps(index, tap_payload, proxy, proxy_check_results)
+                        tap_result = await submit_taps(index, tap_payload, proxy)
                         if tap_result is not None:
                             if 'data' in tap_result and 'telegramGameProcessTapsBatch' in tap_result['data']:
                                 tap_data = tap_result['data']['telegramGameProcessTapsBatch']
                                 if tap_data['currentBoss']['currentHealth'] == 0:
                                     print("\nBoss đã bị hạ gục, chuyển boss tiếp theo...")
-                                    await set_next_boss(index, headers, proxy, proxy_check_results)
+                                    await set_next_boss(index, headers, proxy)
                                     print(f"\rĐang tap memefi: {tap_data['coinsAmount']}, Boss ⚔️: {tap_data['currentBoss']['currentHealth']} - {tap_data['currentBoss']['maxHealth']}    ")
                         else:
                             print(f"❌ Gặp sự cố với mã trạng thái {tap_result}, thử lại...")
@@ -226,8 +220,8 @@ async def activate_booster(index, headers, proxy, proxy_check_results):
                 print(f"Response: {response_text}")
                 return None 
 
-async def submit_taps(index, json_payload, proxy, proxy_check_results):
-    result = await fetch(index + 1, proxy, proxy_check_results)
+async def submit_taps(index, json_payload, proxy):
+    result = await fetch(index + 1, proxy)
     if not result:
         return None
 
@@ -252,8 +246,8 @@ async def submit_taps(index, json_payload, proxy, proxy_check_results):
                     return response
 
 
-async def set_next_boss(index, headers, proxy, proxy_check_results):
-    result = await fetch(index + 1, proxy, proxy_check_results)
+async def set_next_boss(index, headers, proxy):
+    result = await fetch(index + 1, proxy)
     if not result:
         return None
 
@@ -292,8 +286,8 @@ async def set_next_boss(index, headers, proxy, proxy_check_results):
 
 
 
-async def check_stat(index, headers, proxy, proxy_check_results):
-    result = await fetch(index + 1, proxy, proxy_check_results)
+async def check_stat(index, headers, proxy):
+    result = await fetch(index + 1, proxy)
     if not result:
         return None
 
@@ -328,53 +322,8 @@ async def main():
     print("Bắt đầu Memefi bot...")
     print("\rKiểm tra proxy...", end="", flush=True)
     proxies = load_proxies()
-    new_proxies = load_proxies('proxy.txt')
-    old_unavailable_proxies = load_proxies('proxy_unavailable.txt')
-    unavailable_proxies = []
-    proxy_check_results = {}
-
-    def save_proxies(file_path, proxies_list):
-        with open(file_path, 'w') as file:
-            for proxy in proxies_list:
-                file.write(f"{proxy.strip()}\n") 
-
-
-    async def replace_invalid_proxy(proxy):
-        if new_proxies:
-            while new_proxies:
-                new_proxy = new_proxies.pop(0).strip() 
-                if await check_proxy(new_proxy, proxy_check_results):
-                    save_proxies('proxy_new.txt', new_proxies)
-                    return new_proxy
-                else:
-                    unavailable_proxies.append(new_proxy)
-        return None
-
-    valid_proxies = []
-    unavailable_proxies = old_unavailable_proxies.copy()
-    for proxy in proxies:
-        proxy = proxy.strip() 
-        if await check_proxy(proxy, proxy_check_results):
-            valid_proxies.append(proxy)
-        else:
-            unavailable_proxies.append(proxy)
-            new_proxy = await replace_invalid_proxy(proxy)
-            if new_proxy:
-                valid_proxies.append(new_proxy)  
-            else:
-                print("\nKhông đủ proxy mới để thay thế tất cả proxy không hợp lệ.")
-                break  
-
-    if len(valid_proxies) != len(proxies):
-        print("\nKhông thể thay thế tất cả proxy không hợp lệ. Dừng quá trình.")
-        save_proxies('proxy_unavailable.txt', unavailable_proxies)
-        return
-
-    save_proxies('proxy.txt', valid_proxies)
-    save_proxies('proxy_unavailable.txt', unavailable_proxies)
-
-
-    print("\nTất cả proxy đều hợp lệ. lấy danh sách tài khoản...")
+    
+    print("\nlấy danh sách tài khoản...")
 
 
     while True:
@@ -383,8 +332,8 @@ async def main():
 
         accounts = []
         for index, line in enumerate(lines):
-            proxy = valid_proxies[index % len(valid_proxies)]
-            result, proxy_ip = await check_user(index, proxy, proxy_check_results)
+            proxy = proxies[index % len(proxies)]
+            result, proxy_ip = await check_user(index, proxy)
             if result is not None:
                 first_name = result.get('firstName', 'Unknown')
                 last_name = result.get('lastName', 'Unknown')
@@ -398,7 +347,7 @@ async def main():
 
         for index, result, first_name, last_name, proxy_ip in accounts:
             headers = {'Authorization': f'Bearer {result}'}
-            stat_result = await check_stat(index, headers, proxies[index % len(proxies)], proxy_check_results)
+            stat_result = await check_stat(index, headers, proxies[index % len(proxies)])
 
             if stat_result is not None:
                 user_data = stat_result
@@ -417,7 +366,7 @@ async def main():
                     continue
                 if mau_boss == 0:
                     print("\nBoss đã bị hạ gục, chuyển boss tiếp theo...", flush=True)
-                    await set_next_boss(index, headers, proxies[index % len(proxies)], proxy_check_results)
+                    await set_next_boss(index, headers, proxies[index % len(proxies)])
                 print("\rBắt đầu tap\n", end="", flush=True)
 
                 energy_now = user_data['currentEnergy']
@@ -435,9 +384,9 @@ async def main():
                         "query": MUTATION_GAME_PROCESS_TAPS_BATCH
                     }
 
-                    tap_result = await submit_taps(index, tap_payload, proxies[index % len(proxies)], proxy_check_results)
+                    tap_result = await submit_taps(index, tap_payload, proxies[index % len(proxies)])
                     if tap_result is not None:
-                        user_data = await check_stat(index, headers, proxies[index % len(proxies)], proxy_check_results)
+                        user_data = await check_stat(index, headers, proxies[index % len(proxies)])
                         energy_now = user_data['currentEnergy']
                         recharge_available = user_data['freeBoosts']['currentRefillEnergyAmount']
                         print(f"\rĐang tap Memefi : Balance 💎 {user_data['coinsAmount']} Năng lượng : {energy_now} / {user_data['maxEnergy']}\n")
@@ -447,8 +396,8 @@ async def main():
                     if energy_now < 500:
                         if recharge_available > 0:
                             print("\rHết năng lượng, kích hoạt Recharge... \n", end="", flush=True)
-                            await activate_energy_recharge_booster(index, headers, proxies[index % len(proxies)], proxy_check_results)
-                            user_data = await check_stat(index, headers, proxies[index % len(proxies)], proxy_check_results)
+                            await activate_energy_recharge_booster(index, headers, proxies[index % len(proxies)])
+                            user_data = await check_stat(index, headers, proxies[index % len(proxies)])
                             energy_now = user_data['currentEnergy']
                             recharge_available = user_data['freeBoosts']['currentRefillEnergyAmount']
                         else:
@@ -456,7 +405,7 @@ async def main():
                             break
 
                     if user_data['freeBoosts']['currentTurboAmount'] > 0:
-                        await activate_booster(index, headers, proxies[index % len(proxies)], proxy_check_results)
+                        await activate_booster(index, headers, proxies[index % len(proxies)])
         print("=== [ TẤT CẢ TÀI KHOẢN ĐÃ ĐƯỢC XỬ LÝ ] ===")
     
         animate_energy_recharge(600)
