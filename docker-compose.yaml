@@ -1,0 +1,43 @@
+x-defaults:
+  &default-service
+  restart: unless-stopped
+  stop_signal: SIGINT
+  tty: true
+  logging:
+    driver: "json-file"
+    options:
+      max-size: 1m
+
+
+services:
+  gemz:
+    <<: *default-service
+    build:
+      context: ./gemz
+      dockerfile: Dockerfile
+    container_name: 'gemz'
+    volumes:
+      - ./gemz/main_noproxy.js:/app/main.js
+      - ./gemz/query.txt:/app/query.txt
+
+
+  tonk-meme:
+    <<: *default-service
+    build:
+      context: ./tonk-meme
+      dockerfile: Dockerfile
+    container_name: 'tonk-meme'
+    volumes:
+      - ./tonk-meme/conf.toml:/root/conf.toml
+      - ./tonk-meme/main.go:/root/main.go
+
+  bump:
+    <<: *default-service
+    build:
+      context: ./bump
+      dockerfile: Dockerfile
+    container_name: 'bump'
+    volumes:
+      - ./bump/main_noproxy.js:/app/main.js
+      - ./bump/query.txt:/app/query.txt
+      - ./bump/proxy.txt:/app/proxy.txt
