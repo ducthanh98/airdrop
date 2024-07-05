@@ -1,0 +1,7 @@
+[auth]
+tokens=[]
+farm_id="53b22103-c7ff-413d-bc63-20f6fb806a07" # DO NOT CHANGE THIS
+game_id="59bcd12e-04e2-404c-a172-311a0084587d"  # DO NOT CHANGE THIS
+
+[proxies]
+data=[]
