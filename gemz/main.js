@@ -5,6 +5,8 @@ const crypto = require('crypto');
 const { HttpsProxyAgent } = require('https-proxy-agent');
 const cliProgress = require('cli-progress');
 
+const BASE_URL = 'https://gemzcoin.us-east-1.replicant.gc-internal.net/gemzcoin/v2.31.1'
+
 function taoSid() {
     return crypto.randomBytes(6).toString('base64').slice(0, 9);
 }
@@ -60,7 +62,7 @@ async function xuly(queryId, proxy, progress) {
 
     const config1 = {
         method: 'post',
-        url: 'https://gemzcoin.us-east-1.replicant.gc-internal.net/gemzcoin/v2.20.5/loginOrCreate',
+        url: BASE_URL + '/loginOrCreate',
         headers: {
             'Accept': 'application/json, text/plain, */*',
             'Accept-Encoding': 'gzip, deflate, br, zstd',
@@ -135,7 +137,7 @@ async function xuly(queryId, proxy, progress) {
 
             const config2 = {
                 method: 'post',
-                url: 'https://gemzcoin.us-east-1.replicant.gc-internal.net/gemzcoin/v2.20.5/replicate',
+                url: BASE_URL + '/replicate',
                 headers: {
                     'Accept': 'application/json, text/plain, */*',
                     'Accept-Encoding': 'gzip, deflate, br, zstd',
@@ -207,7 +209,7 @@ async function xuly(queryId, proxy, progress) {
 
             const config3 = {
                 method: 'post',
-                url: 'https://gemzcoin.us-east-1.replicant.gc-internal.net/gemzcoin/v2.20.5/replicate',
+                url: BASE_URL + '/replicate',
                 headers: {
                     'Accept': 'application/json, text/plain, */*',
                     'Accept-Encoding': 'gzip, deflate, br, zstd',
