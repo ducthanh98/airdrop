@@ -32,12 +32,12 @@ const checkProxyIP = async (proxy) => {
             httpsAgent: proxyAgent
         });
         if (response.status === 200) {
-            console.log('\nĐịa chỉ IP của proxy là:', response.data.ip);
+            console.log('\nThe IP address of the proxy is:', response.data.ip);
         } else {
-            console.error('Không thể kiểm tra IP của proxy. Status code:', response.status);
+            console.error('Unable to check the IP of the proxy. Status code:', response.status);
         }
     } catch (error) {
-        console.error('Error khi kiểm tra IP của proxy:', error);
+        console.error('Error when checking the IP of the proxy:', error);
     }
 };
 
@@ -52,7 +52,7 @@ const finishFarmingIfNeeded = async (farmingData, farmingHeaders, proxyAgent) =>
             const finishResponse = await axios.post(finishUrl, finishPayload, { headers: farmingHeaders, httpsAgent: proxyAgent });
 
             if (finishResponse.status === 200) {
-                console.log('Đã hoàn thành farming');
+                console.log('Farming completed');
 
                 const farmingStartUrl = 'https://api.mmbump.pro/v1/farming/start';
                 const farmingStartPayload = { status: 'inProgress' };
@@ -60,24 +60,24 @@ const finishFarmingIfNeeded = async (farmingData, farmingHeaders, proxyAgent) =>
                 const startResponse = await axios.post(farmingStartUrl, farmingStartPayload, { headers: farmingHeaders, httpsAgent: proxyAgent });
 
                 if (startResponse.status === 200) {
-                    console.log('Bắt đầu farming...');
+                    console.log('Starting farming...');
                 } else {
-                    console.error('Lỗi khi bắt đầu farming:', startResponse.data);
+                    console.error('Error when starting farming:', startResponse.data);
                 }
             } else {
-                console.error('Lỗi khi hoàn thành farming:', finishResponse.data);
+                console.error('Error when completing farming:', finishResponse.data);
             }
         } catch (error) {
             if (error.response) {
-                if (error.response.data.code === 431 && error.response.data.message === 'Нельзя закрыть сессию раньше времени') {
-                    console.log('Đang trong trạng thái farming');
+                if (error.response.data.code === 431 && error.response.data.message === 'Cannot close session prematurely') {
+                    console.log('In farming state');
                 } else {
                     console.error('Response data:', JSON.stringify(error.response.data, null, 2));
                 }
             }
         }
     } else {
-        console.log('Đang trong trạng thái farming');
+        console.log('In farming state');
     }
 };
 
@@ -111,27 +111,27 @@ const xuly = async (telegramId, proxy) => {
                     }
                 }
                 attempts++;
-                console.log(`Thử lại lần ${attempts} để lấy dữ liệu farming...`);
+                console.log(`Retry ${attempts} to fetch farming data...`);
             }
 
             if (farmingData && farmingData.telegram_id !== undefined && farmingData.balance !== undefined) {
-                console.log('====================Dân Cày Airdrop====================');
+                console.log('====================Airdrop Farmer====================');
                 console.log('ID:', farmingData.telegram_id);
                 console.log('Balance:', farmingData.balance);
-                console.log('=======================Cao Bang========================');
+                console.log('===============================================');
                 const currentTime = Math.floor(Date.now() / 1000);
 
                 try {
                     if (farmingData.day_grant_first === null || (currentTime - farmingData.day_grant_first) >= 86400) {
                         const grantDayClaimUrl = 'https://api.mmbump.pro/v1/grant-day/claim';
                         await axios.post(grantDayClaimUrl, {}, { headers: farmingHeaders, httpsAgent: proxyAgent });
-                        console.log('Điểm danh hàng ngày');
+                        console.log('Daily check-in');
                     } else {
-                        console.log('Đã điểm danh hàng ngày');
+                        console.log('Already checked in today');
                     }
                 } catch (grantError) {
                     if (grantError.response && grantError.response.status === 400) {
-                        console.log('Đã điểm danh hàng ngày');
+                        console.log('Already checked in today');
                     } else {
                         throw grantError;
                     }
@@ -141,20 +141,20 @@ const xuly = async (telegramId, proxy) => {
                     const farmingStartUrl = 'https://api.mmbump.pro/v1/farming/start';
                     const farmingStartPayload = { status: 'inProgress' };
                     await axios.post(farmingStartUrl, farmingStartPayload, { headers: farmingHeaders, httpsAgent: proxyAgent });
-                    console.log('Bắt đầu farming...');
+                    console.log('Starting farming...');
                 } else if (farmingData.session.status === 'inProgress' && farmingData.session.moon_time > currentTime) {
-                    console.log('Đang trong trạng thái farming');
+                    console.log('In farming state');
                 } else {
                     await finishFarmingIfNeeded(farmingData, farmingHeaders, proxyAgent);
                 }
             } else {
-                console.error('Không thể lấy dữ liệu farming hợp lệ sau nhiều lần thử');
+                console.error('Unable to fetch valid farming data after multiple attempts');
             }
         } else {
-            throw new Error('Không thể xác thực');
+            throw new Error('Unable to authenticate');
         }
     } catch (error) {
-        console.error('Lỗi rồi:', error);
+        console.error('An error occurred:', error);
     }
 };
 
@@ -165,10 +165,10 @@ const animatedLoading = (durationInMilliseconds) => {
         const interval = setInterval(() => {
             const remainingTime = Math.floor((endTime - Date.now()) / 1000);
             const frame = frames[Math.floor(Date.now() / 250) % frames.length];
-            process.stdout.write(`\rChờ đợi lần yêu cầu tiếp theo ${frame} - Còn lại ${remainingTime} giây...`);
+            process.stdout.write(`\rWaiting for the next request ${frame} - Remaining ${remainingTime} seconds...`);
             if (Date.now() >= endTime) {
                 clearInterval(interval);
-                process.stdout.write("\rĐang chờ yêu cầu tiếp theo được hoàn thành.\n");
+                process.stdout.write("\rWaiting for the next request to complete.\n");
                 resolve();
             }
         }, 250);
