@@ -22,3 +22,10 @@ type PingMessage struct {
 	ID     string `json:"id"`
 	Action string `json:"action"`
 }
+
+type PingPostRequest struct {
+	ID        string `json:"id"`
+	BrowserID string `json:"browser_id"`
+	Timestamp int    `json:"timestamp"`
+	Version   string `json:"version"`
+}

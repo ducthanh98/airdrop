@@ -8,6 +8,7 @@ import (
 	"github.com/go-resty/resty/v2"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"github.com/spf13/cast"
 	"github.com/spf13/viper"
 	"log"
 	"net"
@@ -29,9 +30,9 @@ func main() {
 	proxies := viper.GetStringSlice("data.proxies")
 
 	for _, proxyURL := range proxies {
-		//go pingNetworkDevice(token, proxyURL, publicIp.IP)
+		go pingNetworkDevice(token, proxyURL)
 
-		go connectSocket(token, proxyURL)
+		//go connectSocket(token, proxyURL)
 	}
 
 	select {}
@@ -219,15 +220,23 @@ func pingNetworkDevice(token, proxyURL string) {
 		client.SetProxy(proxyURL)
 	}
 
+	body := request.PingPostRequest{
+		ID:        "1245581001883648000",
+		BrowserID: "uuid.New().String()",
+		Timestamp: cast.ToInt(time.Now().Format("20060102150405")) / 1000,
+		Version:   "2.2.3",
+	}
 	for {
-
-		_, err := client.R().
+		body.Timestamp = cast.ToInt(time.Now().Format("20060102150405")) / 1000
+		res, err := client.R().
+			SetBody(body).
 			SetAuthToken(token).
-			Get(fmt.Sprintf("%v/network/device-network?ip=%v", constant.BASE_URL))
+			Post(constant.PING_URL)
 		if err != nil {
 			log.Println("Can't check device network", err)
 		}
+		fmt.Println("Proxy", proxyURL, "Ping res", res)
 
-		time.Sleep(3 * time.Second)
+		time.Sleep(constant.PING_INTERVAL * time.Millisecond)
 	}
 }
