@@ -5,7 +5,7 @@ const crypto = require('crypto');
 const { HttpsProxyAgent } = require('https-proxy-agent');
 const cliProgress = require('cli-progress');
 
-const BASE_URL = 'https://gemzcoin.us-east-1.replicant.gc-internal.net/gemzcoin/v2.31.1'
+const BASE_URL = 'https://gemzcoin.us-east-1.replicant.gc-internal.net/gemzcoin/v2.34.6'
 
 function taoSid() {
     return crypto.randomBytes(6).toString('base64').slice(0, 9);
@@ -278,7 +278,7 @@ async function runTasks() {
 (async () => {
     while (true) {
         await runTasks();
-        console.log('Đang nghỉ 15 phút...');
-        await new Promise(resolve => setTimeout(resolve, 15 * 60 * 1000));
+        console.log('Đang nghỉ 5 phút...');
+        await new Promise(resolve => setTimeout(resolve, 5 * 60 * 1000));
     }
 })();
