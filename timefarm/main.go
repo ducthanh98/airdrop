@@ -6,7 +6,6 @@ import (
 	"github.com/spf13/viper"
 	"time"
 	"timefarm/constant"
-	"timefarm/request"
 )
 
 func main() {
@@ -32,22 +31,23 @@ func main() {
 func collect(query string, proxy string) {
 	client := resty.New()
 	for {
-		var authResponse request.AuthResponse
+		//var authResponse request.AuthResponse
+		//res, err := client.
+		//	SetProxy(proxy).
+		//	R().
+		//	SetBody(request.ValidateInitRequest{InitData: query, Platform: "android"}).
+		//	SetResult(&authResponse).
+		//	Post(constant.AuthAPI)
+		//if err != nil {
+		//	fmt.Println("Get auth err: ", err)
+		//	time.Sleep(5 * time.Minute)
+		//	go collect(query, proxy)
+		//	return
+		//}
+		//fmt.Println(res)
+		//token := authResponse.Token
+		token := query
 		res, err := client.
-			SetProxy(proxy).
-			R().
-			SetBody(query).
-			SetResult(&authResponse).
-			Post(constant.AuthAPI)
-		if err != nil {
-			fmt.Println("Get auth err: ", err)
-			time.Sleep(5 * time.Minute)
-			go collect(query, proxy)
-			return
-		}
-		token := authResponse.Token
-
-		res, err = client.
 			SetProxy(proxy).
 			R().
 			SetAuthToken(token).

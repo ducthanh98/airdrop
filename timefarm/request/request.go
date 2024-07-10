@@ -22,3 +22,8 @@ type PingMessage struct {
 	ID     string `json:"id"`
 	Action string `json:"action"`
 }
+
+type ValidateInitRequest struct {
+	InitData string `json:"initData"`
+	Platform string `json:"platform"`
+}

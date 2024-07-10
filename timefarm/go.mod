@@ -4,8 +4,6 @@ go 1.22.3
 
 require (
 	github.com/go-resty/resty/v2 v2.13.1
-	github.com/google/uuid v1.4.0
-	github.com/gorilla/websocket v1.5.1
 	github.com/spf13/viper v1.19.0
 )
 
