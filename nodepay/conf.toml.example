@@ -1,0 +1,5 @@
+[data]
+proxies= [
+    "http://user:pass@ip:port"
+]
+token=""
