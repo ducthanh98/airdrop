@@ -149,54 +149,58 @@ func connectSocket(token string, proxyURL string) {
 
 	defer c.Close()
 
-	go sendHeartbeat(c)
+	heartbeatTicker := time.NewTicker(time.Second)
+	metricsTicker := time.NewTicker(2 * time.Second)
+	errorChan := make(chan bool)
+	go func() {
+		for {
+			select {
+			case <-heartbeatTicker.C:
+				err := sendHeartbeat(c)
+				if err != nil {
+					errorChan <- true
+					return
+				}
+			case <-metricsTicker.C:
 
-	time.Sleep(100 * time.Millisecond)
-	go sendMetrics(c)
+				err := sendMetrics(c)
+				if err != nil {
+					errorChan <- true
+					return
 
-	for {
-		_, payload, err := c.ReadMessage()
-		if err != nil {
-			log.Println("Read message error:", err)
-			time.Sleep(1 * time.Minute)
-			log.Println("Error. Reconnecting after a minute")
-			go connectSocket(token, proxyURL)
-			return
+				}
+
+			}
 		}
-		log.Printf("recv: %s", payload)
-	}
+	}()
+
+	<-errorChan
+	fmt.Println("Error. Retrying after a min")
+	time.Sleep(1 * time.Minute)
+	go connectSocket(token, proxyURL)
 }
 
-func sendMetrics(c *websocket.Conn) {
-	for {
-		tmp := request.WsRequest{
-			Type: "settings",
-			Data: `{"type":"settings","data":{"mostRecentModel":"todo","userSettings":{"schedule":{"mode":"all","days":["monday","tuesday","wednesday","thursday","friday"],"startTime":"10:00","stopTime":"16:00","usage":"maximum"},"enabledModels":[]},"systemInfo":{"cpuInfo":{"archName":"x86_64","features":["mmx","sse","sse2","sse3","ssse3","sse4_1","sse4_2","avx"],"modelName":"11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz","numOfProcessors":8,"processors":[{"usage":{"idle":14164178593750,"kernel":273043437500,"total":14649615781250,"user":212393750000}},{"usage":{"idle":14236624375000,"kernel":217418593750,"total":14649614218750,"user":195571250000}},{"usage":{"idle":13845941406250,"kernel":363910937500,"total":14649614218750,"user":439761875000}},{"usage":{"idle":13938280468750,"kernel":308302031250,"total":14649614218750,"user":403031718750}},{"usage":{"idle":14032352812500,"kernel":301410468750,"total":14649614218750,"user":315850937500}},{"usage":{"idle":14094232968750,"kernel":253281250000,"total":14649614062500,"user":302099843750}},{"usage":{"idle":13931273750000,"kernel":328632187500,"total":14649614062500,"user":389708125000}},{"usage":{"idle":14005404687500,"kernel":274691718750,"total":14649614062500,"user":369517656250}}],"temperatures":[]},"memoryInfo":{"availableCapacity":873607168,"capacity":8375296000},"gpuInfo":{"vendor":"Google Inc. (Intel)","renderer":"ANGLE (Intel, Intel(R) Iris(R) Xe Graphics (0x00009A49) Direct3D11 vs_5_0 ps_5_0, D3D11)"}},"extensionVersion":"0.1.0","chromeVersion":"126"}}`,
-		}
-		writeSocketMessage(c, tmp)
-		time.Sleep(2 * time.Minute)
+func sendMetrics(c *websocket.Conn) error {
+	tmp := request.WsRequest{
+		Type: "settings",
+		Data: `{"type":"settings","data":{"mostRecentModel":"todo","userSettings":{"schedule":{"mode":"all","days":["monday","tuesday","wednesday","thursday","friday"],"startTime":"10:00","stopTime":"16:00","usage":"maximum"},"enabledModels":[]},"systemInfo":{"cpuInfo":{"archName":"x86_64","features":["mmx","sse","sse2","sse3","ssse3","sse4_1","sse4_2","avx"],"modelName":"11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz","numOfProcessors":8,"processors":[{"usage":{"idle":14164178593750,"kernel":273043437500,"total":14649615781250,"user":212393750000}},{"usage":{"idle":14236624375000,"kernel":217418593750,"total":14649614218750,"user":195571250000}},{"usage":{"idle":13845941406250,"kernel":363910937500,"total":14649614218750,"user":439761875000}},{"usage":{"idle":13938280468750,"kernel":308302031250,"total":14649614218750,"user":403031718750}},{"usage":{"idle":14032352812500,"kernel":301410468750,"total":14649614218750,"user":315850937500}},{"usage":{"idle":14094232968750,"kernel":253281250000,"total":14649614062500,"user":302099843750}},{"usage":{"idle":13931273750000,"kernel":328632187500,"total":14649614062500,"user":389708125000}},{"usage":{"idle":14005404687500,"kernel":274691718750,"total":14649614062500,"user":369517656250}}],"temperatures":[]},"memoryInfo":{"availableCapacity":873607168,"capacity":8375296000},"gpuInfo":{"vendor":"Google Inc. (Intel)","renderer":"ANGLE (Intel, Intel(R) Iris(R) Xe Graphics (0x00009A49) Direct3D11 vs_5_0 ps_5_0, D3D11)"}},"extensionVersion":"0.1.0","chromeVersion":"126"}}`,
 	}
+	return writeSocketMessage(c, tmp)
 }
 
-func sendHeartbeat(c *websocket.Conn) {
-	for {
-		tmp := request.WsRequest{
-			Type: "heartbeat",
-			Data: request.HeartbeatData{Status: "active"},
-		}
-		writeSocketMessage(c, tmp)
-		time.Sleep(1 * time.Minute)
+func sendHeartbeat(c *websocket.Conn) error {
+	tmp := request.WsRequest{
+		Type: "heartbeat",
+		Data: request.HeartbeatData{Status: "active"},
 	}
+	return writeSocketMessage(c, tmp)
 }
 
-func writeSocketMessage(c *websocket.Conn, msg interface{}) {
+func writeSocketMessage(c *websocket.Conn, msg interface{}) error {
 	lock.Lock()
 	defer lock.Unlock()
 	body, _ := json.Marshal(msg)
 	fmt.Println(string(body))
 	err := c.WriteMessage(websocket.TextMessage, body)
-	if err != nil {
-		log.Println("write:", err)
-		return
-	}
+	return err
 }
