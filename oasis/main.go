@@ -149,8 +149,8 @@ func connectSocket(token string, proxyURL string) {
 
 	defer c.Close()
 
-	heartbeatTicker := time.NewTicker(time.Second)
-	metricsTicker := time.NewTicker(2 * time.Second)
+	heartbeatTicker := time.NewTicker(time.Minute)
+	metricsTicker := time.NewTicker(2 * time.Minute)
 	errorChan := make(chan bool)
 	go func() {
 		for {
