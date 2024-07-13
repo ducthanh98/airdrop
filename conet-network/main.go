@@ -6,13 +6,21 @@ import (
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"log"
 	"net/url"
 	"strings"
 	"time"
 )
 
+var logger *zap.Logger
+
 func main() {
+	config := zap.NewDevelopmentConfig()
+	config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	logger, _ = config.Build()
+
 	viper.SetConfigFile("./conf.toml")
 	err := viper.ReadInConfig() // Find and read the config file
 	if err != nil {             // Handle errors reading the config file
@@ -24,17 +32,20 @@ func main() {
 	password := viper.GetString("data.password")
 
 	for i, wallet := range wallets {
-		go mine(wallet, proxies[i], password)
+		go mine(wallet, proxies[i], password, i)
+		break
 	}
 
 	select {}
-
 }
 
-func mine(wallet, proxy, password string) {
+func mine(wallet, proxy, password string, idx int) {
 	// Create a launcher with options
+	path, _ := launcher.LookPath()
+	logger.Info("Found path", zap.Any("path", path))
+
 	parsedUrl, _ := url.Parse(proxy)
-	launcher := launcher.New().
+	launcher := launcher.New().Bin(path).
 		Proxy(fmt.Sprintf("http://%v", parsedUrl.Host)).
 		Headless(true) // Ensure it's set to false for visible UI
 
@@ -97,7 +108,7 @@ func mine(wallet, proxy, password string) {
 	// Click the button
 	button.MustClick()
 
-	time.Sleep(3 * time.Second)
+	time.Sleep(5 * time.Second)
 	// Wait for the page to load completely
 	page.MustWaitLoad()
 
@@ -118,7 +129,7 @@ func mine(wallet, proxy, password string) {
 	// Click the button
 	button.MustClick()
 
-	time.Sleep(3 * time.Second)
+	time.Sleep(5 * time.Second)
 	// Wait for the page to load completely
 	page.MustWaitLoad()
 
@@ -128,9 +139,18 @@ func mine(wallet, proxy, password string) {
 	button.MustClick()
 
 	button = page.MustElement(`div.sc-dQmiwx.jyJvBb`)
+
 	// Click the button
 	button.MustClick()
-	fmt.Println("Start mining")
+	logger.Info(fmt.Sprintf("Wallet %v start mining", i))
 
-	select {}
+	for {
+		element := page.MustElement("div.sc-hABBmJ.kdGLpR > p:nth-of-type(2)")
+
+		// Get the text content of the element
+		cnptNumber := element.MustText()
+		logger.Info(fmt.Sprintf("Wallet %v current balance", cnptNumber))
+
+		time.Sleep(1 * time.Minute)
+	}
 }

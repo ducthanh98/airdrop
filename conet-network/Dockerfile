@@ -19,6 +19,9 @@ RUN go build -o main .
 # Stage 2: Create a smaller image for running the application
 FROM alpine:latest
 
+# Install necessary dependencies for Rod (like Chrome)
+RUN apk add chromium
+
 # Set the Current Working Directory inside the container
 WORKDIR /root/
 
