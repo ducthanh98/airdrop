@@ -33,7 +33,6 @@ func main() {
 
 	for i, wallet := range wallets {
 		go mine(wallet, proxies[i], password, i)
-		break
 	}
 
 	select {}
@@ -142,14 +141,14 @@ func mine(wallet, proxy, password string, idx int) {
 
 	// Click the button
 	button.MustClick()
-	logger.Info(fmt.Sprintf("Wallet %v start mining", i))
+	logger.Info(fmt.Sprintf("Wallet %v start mining", idx))
 
 	for {
 		element := page.MustElement("div.sc-hABBmJ.kdGLpR > p:nth-of-type(2)")
 
 		// Get the text content of the element
 		cnptNumber := element.MustText()
-		logger.Info(fmt.Sprintf("Wallet %v current balance", cnptNumber))
+		logger.Info(fmt.Sprintf("Wallet %v : current balance %v ", idx, cnptNumber))
 
 		time.Sleep(1 * time.Minute)
 	}
