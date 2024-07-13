@@ -222,7 +222,7 @@ func pingNetworkDevice(token, proxyURL string) {
 
 	body := request.PingPostRequest{
 		ID:        "1245581001883648000",
-		BrowserID: "uuid.New().String()",
+		BrowserID: uuid.New().String(),
 		Timestamp: cast.ToInt(time.Now().Format("20060102150405")) / 1000,
 		Version:   "2.2.3",
 	}
