@@ -1,0 +1,1 @@
+Link: https://t.me/hamster_koMbat_bot/start?startapp=kentId1939627995

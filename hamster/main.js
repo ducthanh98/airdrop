@@ -10,7 +10,7 @@ const csvData = fs.readFileSync('query.txt', 'utf8');
 const authorizationList = csvData.split('\n').map(line => line.trim()).filter(line => line !== '');
 
 const dancay = axios.create({
-    baseURL: 'https://api.hamsterkombat.io',
+    baseURL: 'https://api.hamsterkombatgame.io',
     timeout: 10000,
     headers: {
         'Content-Type': 'application/json'

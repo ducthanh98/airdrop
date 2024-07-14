@@ -12,7 +12,7 @@ const proxyList = csvDataProxy.split('\n').map(line => line.trim()).filter(line 
 function createAxiosInstance(proxy) {
     const proxyAgent = new HttpsProxyAgent(proxy);
     return axios.create({
-        baseURL: 'https://api.hamsterkombat.io',
+        baseURL: 'https://api.hamsterkombatgame.io',
         timeout: 10000,
         headers: {
             'Content-Type': 'application/json'
@@ -185,8 +185,8 @@ async function askForCipher() {
 }
 
 async function upgrade() {
-    const shouldUpgrade = 'n';
-    const cipher = '';
+    const shouldUpgrade = await askForUpgrade();
+    const cipher = await askForCipher();
 
     for (let i = 0; i < authorizationList.length; i++) {
         const authorization = authorizationList[i];
