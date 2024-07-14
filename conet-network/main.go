@@ -41,22 +41,27 @@ func main() {
 func mine(wallet, proxy, password string, idx int) {
 	// Create a launcher with options
 	path, _ := launcher.LookPath()
-	logger.Info("Found path", zap.Any("path", path))
+	logger.Info(fmt.Sprintf("Wallet  %v Found path", idx), zap.Any("path", path))
 
 	parsedUrl, _ := url.Parse(proxy)
 	launcher := launcher.New().Bin(path).
-		Proxy(fmt.Sprintf("http://%v", parsedUrl.Host)).
 		Headless(true) // Ensure it's set to false for visible UI
+	if proxy != "" {
+		launcher = launcher.Proxy(fmt.Sprintf("http://%v", parsedUrl.Host))
+
+	}
 
 	// Launch a browser instance
 	browser := rod.New().ControlURL(launcher.MustLaunch()).MustConnect()
-	proxyPass, _ := parsedUrl.User.Password()
 
 	// Ensure the browser is closed at the end
 	defer browser.MustClose()
 
 	page, err := browser.Page(proto.TargetCreateTarget{URL: "https://ifconfig.co"})
-	go browser.MustHandleAuth(parsedUrl.User.Username(), proxyPass)()
+	if proxy != "" {
+		proxyPass, _ := parsedUrl.User.Password()
+		go browser.MustHandleAuth(parsedUrl.User.Username(), proxyPass)()
+	}
 
 	time.Sleep(3 * time.Second)
 
