@@ -4,6 +4,7 @@ go 1.22.3
 
 require (
 	github.com/go-rod/rod v0.116.1
+	github.com/google/uuid v1.4.0
 	github.com/spf13/viper v1.19.0
 	go.uber.org/zap v1.21.0
 )

@@ -32,7 +32,7 @@ func main() {
 	password := viper.GetString("data.password")
 
 	for i, wallet := range wallets {
-		go mine(wallet, proxies[i], password, i)
+		go mine(wallet, proxies[i%len(proxies)], password, i)
 	}
 
 	select {}
