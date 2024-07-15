@@ -33,6 +33,7 @@ func main() {
 
 	for i, wallet := range wallets {
 		go mine(wallet, proxies[i%len(proxies)], password, i)
+		break
 	}
 
 	select {}
@@ -151,7 +152,7 @@ func mine(wallet, proxy, password string, idx int) {
 	for {
 		time.Sleep(2 * time.Minute)
 
-		workerId := strings.ToLower(page.MustElement(".css-15vhhhd .css-k7gw1t'").MustText())
+		workerId := strings.ToLower(page.MustElement(".css-15vhhhd > css-k7gw1t'").MustText())
 		if strings.Contains(workerId, "calculating") {
 			logger.Info(fmt.Sprintf("Wallet %v : waits too long. Restarting", idx))
 
