@@ -153,6 +153,8 @@ func mine(wallet, proxy, password string, idx int) {
 
 		workerId := strings.ToLower(page.MustElement(".css-15vhhhd .css-k7gw1t'").MustText())
 		if strings.Contains(workerId, "calculating") {
+			logger.Info(fmt.Sprintf("Wallet %v : waits too long. Restarting", idx))
+
 			go mine(wallet, proxy, password, idx)
 			return
 		}
