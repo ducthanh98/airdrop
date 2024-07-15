@@ -149,12 +149,20 @@ func mine(wallet, proxy, password string, idx int) {
 	logger.Info(fmt.Sprintf("Wallet %v start mining", idx))
 
 	for {
-		element := page.MustElement("div.sc-hABBmJ.kdGLpR > p:nth-of-type(2)")
+		time.Sleep(2 * time.Minute)
+
+		workerId := strings.ToLower(page.MustElement(".css-15vhhhd .css-k7gw1t'").MustText())
+		if strings.Contains(workerId, "calculating") {
+			go mine(wallet, proxy, password, idx)
+			return
+		}
+		logger.Info(fmt.Sprintf("Wallet %v : worker:  %v ", idx, workerId))
+
+		balance := page.MustElement("div.sc-hABBmJ.kdGLpR > p:nth-of-type(2)")
 
 		// Get the text content of the element
-		cnptNumber := element.MustText()
+		cnptNumber := balance.MustText()
 		logger.Info(fmt.Sprintf("Wallet %v : current balance %v ", idx, cnptNumber))
 
-		time.Sleep(1 * time.Minute)
 	}
 }
