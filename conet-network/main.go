@@ -33,7 +33,6 @@ func main() {
 
 	for i, wallet := range wallets {
 		go mine(wallet, proxies[i%len(proxies)], password, i)
-		break
 	}
 
 	select {}
