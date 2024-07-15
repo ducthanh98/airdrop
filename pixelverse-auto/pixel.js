@@ -238,10 +238,10 @@ const main = async () => {
 
     const question = (query) => new Promise((resolve) => rl.question(query, resolve));
 
-    const autoUpgradePet = 'y';
+    const autoUpgradePet = 'n';
     let maxLevelPet = 10;
 
-    const autoDailyCombo = 'y';
+    const autoDailyCombo = 'n';
     let userInputOrder = [];
 
     rl.close();
