@@ -1,0 +1,1 @@
+Link: https://t.me/BlumCryptoBot/app?startapp=ref_fve3GyUrau
