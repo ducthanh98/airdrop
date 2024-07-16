@@ -241,7 +241,7 @@ class BabyDoge {
         const accountsPath = path.join(__dirname, 'query.txt');
         const proxyPath = path.join(__dirname, 'proxy.txt');
         if (!fs.existsSync(accountsPath)) {
-            this.log('File accounts.txt does not exist!'.red);
+            this.log('File query.txt does not exist!'.red);
             input.close();
             return;
         }
