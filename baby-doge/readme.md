@@ -1,2 +1,2 @@
-For query.txt file. Put only userId from query_id 
-Link Bot: https://t.me/Arenavsbot?start=ref_3eAX3n1uNd8hKRvc5Ajrhg
+- Put list of query_id into query.txt file
+- Link Bot: https://t.me/BabyDogePAWS_Bot?start=r_1939627995

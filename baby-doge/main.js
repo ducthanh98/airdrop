@@ -1,12 +1,12 @@
-const { HttpsProxyAgent } = require('https-proxy-agent');
+const {HttpsProxyAgent} = require('https-proxy-agent');
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 const colors = require('colors');
 const readline = require('readline');
-const { performance } = require('perf_hooks');
+const {performance} = require('perf_hooks');
 
-class Pocketfi {
+class BabyDoge {
     constructor() {
         this.headers = {
             'Accept': 'application/json, text/plain, */*',
@@ -21,17 +21,17 @@ class Pocketfi {
             'Sec-Fetch-Mode': 'cors',
             'Sec-Fetch-Site': 'same-site',
             'User-Agent': 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'
-        };        
+        };
         this.line = '~'.repeat(42).white;
     }
 
     async http(url, headers, data = null, proxy = null) {
         let attempts = 0;
         const maxAttempts = 3;
-    
+
         while (attempts < maxAttempts) {
             try {
-                const options = { headers };
+                const options = {headers};
                 if (proxy) {
                     options.httpsAgent = new HttpsProxyAgent(proxy);
                 }
@@ -42,7 +42,7 @@ class Pocketfi {
                     res = await axios.post(url, data, options);
                 }
                 if (typeof res.data !== 'object') {
-                    this.log('Không nhận được phản hồi JSON hợp lệ !'.red);
+                    this.log('Did not receive valid JSON response!'.red);
                     attempts++;
                     await this.sleep(2000);
                     continue;
@@ -50,7 +50,7 @@ class Pocketfi {
                 return res;
             } catch (error) {
                 attempts++;
-                this.log(`Lỗi kết nối (Lần thử ${attempts}/${maxAttempts}): ${error.message}`.red);
+                this.log(`Connection error (Attempt ${attempts}/${maxAttempts}): ${error.message}`.red);
                 console.log(error);
                 if (attempts < maxAttempts) {
                     await this.sleep(5000);
@@ -59,7 +59,7 @@ class Pocketfi {
                 }
             }
         }
-        throw new Error('Không thể kết nối sau 3 lần thử');
+        throw new Error('Unable to connect after 3 attempts');
     }
 
     async checkProxyIP(proxy) {
@@ -71,10 +71,10 @@ class Pocketfi {
             if (response.status === 200) {
                 return response.data.ip;
             } else {
-                throw new Error(`Không thể kiểm tra IP của proxy. Status code: ${response.status}`);
+                throw new Error(`Unable to check proxy IP. Status code: ${response.status}`);
             }
         } catch (error) {
-            throw new Error(`Error khi kiểm tra IP của proxy: ${error.message}`);
+            throw new Error(`Error checking proxy IP: ${error.message}`);
         }
     }
 
@@ -84,21 +84,21 @@ class Pocketfi {
 
     async dangnhap(tgData, proxy) {
         const url = 'https://backend.babydogepawsbot.com/authorize';
-        const headers = { ...this.headers };
+        const headers = {...this.headers};
         try {
             const res = await this.http(url, headers, tgData, proxy);
             if (res.data) {
-                this.log('Đăng nhập thành công!'.green);
-                const { balance, energy, max_energy, access_token } = res.data;
+                this.log('Login successful!'.green);
+                const {balance, energy, max_energy, access_token} = res.data;
                 this.log('Balance:'.green + ` ${balance}`);
-                this.log('Năng lượng:'.green + ` ${energy}/${max_energy}`);
-                return { access_token, energy };
+                this.log('Energy:'.green + ` ${energy}/${max_energy}`);
+                return {access_token, energy};
             } else {
-                this.log('Đăng nhập thất bại!'.red);
+                this.log('Login failed!'.red);
                 return null;
             }
         } catch (error) {
-            this.log(`Lỗi rồi: ${error.message}`.red);
+            this.log(`Error: ${error.message}`.red);
             return null;
         }
     }
@@ -106,90 +106,91 @@ class Pocketfi {
     async daily(access_token, proxy) {
         const checkUrl = 'https://backend.babydogepawsbot.com/getDailyBonuses';
         const claimUrl = 'https://backend.babydogepawsbot.com/pickDailyBonus';
-        const headers = { ...this.headers, 'X-Api-Key': access_token };
+        const headers = {...this.headers, 'X-Api-Key': access_token};
 
         try {
             const checkRes = await this.http(checkUrl, headers, null, proxy);
             if (checkRes.data && checkRes.data.has_available) {
-                this.log('Điểm danh hàng ngày có sẵn!'.yellow);
+                this.log('Daily check-in available!'.yellow);
                 const claimRes = await this.http(claimUrl, headers, '', proxy);
                 if (claimRes.data) {
-                    this.log('Điểm danh hàng ngày thành công!'.green);
+                    this.log('Daily check-in successful!'.green);
                 } else {
-                    this.log('Điểm danh hàng ngày thất bại!'.red);
+                    this.log('Daily check-in failed!'.red);
                 }
             } else {
-                this.log('Hôm nay đã điểm danh hàng ngày.'.yellow);
+                this.log('Already checked in today.'.yellow);
             }
         } catch (error) {
-            this.log(`Lỗi khi kiểm tra hoặc claim daily bonus: ${error.message}`.red);
+            this.log(`Error checking or claiming daily bonus: ${error.message}`.red);
         }
     }
 
     async getTask(access_token, proxy) {
         const url = 'https://backend.babydogepawsbot.com/channels';
-        const headers = { ...this.headers, 'X-Api-Key': access_token };
-    
+        const headers = {...this.headers, 'X-Api-Key': access_token};
+
         try {
             const res = await this.http(url, headers, null, proxy);
             if (res && res.data && res.data.channels) {
                 const availableChannels = res.data.channels.filter(channel => channel.is_available && channel.type !== 'telegram');
                 return availableChannels;
             } else {
-                this.log('Không có nhiệm vụ nào có sẵn.'.yellow);
+                this.log('No tasks available.'.yellow);
                 return [];
             }
         } catch (error) {
-            this.log(`Lỗi rồi: ${error.message}`.red);
+            this.log(`Error: ${error.message}`.red);
             return [];
         }
     }
-    
+
     async claimTask(access_token, channel, proxy) {
         const url = 'https://backend.babydogepawsbot.com/channels';
-        const headers = { ...this.headers, 'X-Api-Key': access_token, 'Content-Type': 'application/json' };
-        const data = JSON.stringify({ channel_id: channel.id });
-    
+        const headers = {...this.headers, 'X-Api-Key': access_token, 'Content-Type': 'application/json'};
+        const data = JSON.stringify({channel_id: channel.id});
+
         try {
             const res = await this.http(url, headers, data, proxy);
             if (res && res.data) {
-                this.log(`Đang làm nhiệm vụ: ${channel.title.yellow}... Trạng thái: thành công`);
+                this.log(`Claiming task: ${channel.title.yellow}... Status: success`);
             } else {
-                this.log(`Lỗi khi nhận phần thưởng cho nhiệm vụ: ${channel.title}`.red);
+                this.log(`Error claiming reward for task: ${channel.title}`.red);
             }
         } catch (error) {
-            this.log(`Lỗi khi nhận phần thưởng: ${error.message}`.red);
+            this.log(`Error claiming reward: ${error.message}`.red);
         }
     }
 
     async tapdc(access_token, initialEnergy, proxy) {
         const url = 'https://backend.babydogepawsbot.com/mine';
-        const headers = { ...this.headers, 'X-Api-Key': access_token, 'Content-Type': 'application/json' };
+        const headers = {...this.headers, 'X-Api-Key': access_token, 'Content-Type': 'application/json'};
         let energy = initialEnergy;
         try {
             while (energy >= 50) {
                 const count = Math.floor(Math.random() * (50 - 10 + 1)) + 10;
-                const data = JSON.stringify({ count });
+                const data = JSON.stringify({count});
 
                 const res = await this.http(url, headers, data, proxy);
                 if (res.data) {
-                    const { balance, mined, newEnergy, league, current_league, next_league } = res.data;
+                    const {balance, mined, newEnergy, league, current_league, next_league} = res.data;
 
-                    this.log(`Đã tap ${String(mined).yellow} lần. Balance: ${String(balance).yellow} Năng lượng: ${String(newEnergy).yellow}`);
+                    this.log(`Tapped ${String(mined).yellow} times. Balance: ${String(balance).yellow} Energy: ${String(newEnergy).yellow}`);
 
                     energy = newEnergy;
 
                     if (energy < 30) {
-                        this.log('Năng lượng quá thấp để tiếp tục tap...chuyển tài khoản!'.yellow);
+                        this.log('Energy too low to continue tapping... switching accounts!'.yellow);
                         break;
                     }
+                    await this.sleep(500)
                 } else {
-                    this.log('Lỗi rồi, không thể tap!'.red);
+                    this.log('Error, unable to tap!'.red);
                     break;
                 }
             }
         } catch (error) {
-            this.log(`Lỗi rồi: ${error.message}`.red);
+            this.log(`Error: ${error.message}`.red);
         }
     }
 
@@ -197,189 +198,84 @@ class Pocketfi {
         const listCardsUrl = 'https://backend.babydogepawsbot.com/cards/new';
         const upgradeUrl = 'https://backend.babydogepawsbot.com/cards';
         const getMeUrl = 'https://backend.babydogepawsbot.com/getMe';
-        const headers = { ...this.headers, 'X-Api-Key': access_token, 'Content-Type': 'application/json' };
-    
+        const headers = {...this.headers, 'X-Api-Key': access_token, 'Content-Type': 'application/json'};
+
         try {
             const getMeRes = await this.http(getMeUrl, headers, null, proxy);
             let balance = getMeRes.data.balance;
-    
+
             const res = await this.http(listCardsUrl, headers, null, proxy);
             if (res.data && res.data.length > 0) {
                 const cards = res.data;
                 for (const card of cards) {
                     if (balance < card.upgrade_cost) {
-                        this.log(`Số dư không đủ để mua thẻ !`.red);
+                        this.log(`Not enough balance to buy card!`.red);
                         return;
                     }
-    
+
                     if (card.cur_level === 0) {
-                        const upgradeData = JSON.stringify({ id: card.id });
+                        const upgradeData = JSON.stringify({id: card.id});
                         const upgradeRes = await this.http(upgradeUrl, headers, upgradeData, proxy);
                         if (upgradeRes.data) {
                             balance = upgradeRes.data.balance;
-                            this.log(`Đang mua thẻ ${card.name.yellow}...Trạng thái: ${'Thành công'.green} Balance mới: ${String(balance).yellow}`);
+                            this.log(`Buying card ${card.name.yellow}... Status: ${'Success'.green} New balance: ${String(balance).yellow}`);
                         } else {
-                            this.log(`Đang mua thẻ ${card.name.yellow}...Trạng thái: ${'Thất bại'.red}`);
+                            this.log(`Buying card ${card.name.yellow}... Status: ${'Failed'.red}`);
                         }
                     }
                 }
             } else {
-                this.log('Không có thẻ mới nào.'.yellow);
+                this.log('No new cards available.'.yellow);
             }
         } catch (error) {
-            this.log(`Lỗi rồi: ${error.message}`.red);
+            this.log(`Error: ${error.message}`.red);
         }
-    }    
+    }
 
-    async upgradeMyCards(access_token, proxy) {
-        const listMyCardsUrl = 'https://backend.babydogepawsbot.com/cards/my';
-        const upgradeUrl = 'https://backend.babydogepawsbot.com/cards';
-        const getMeUrl = 'https://backend.babydogepawsbot.com/getMe';
-        const headers = { ...this.headers, 'X-Api-Key': access_token, 'Content-Type': 'application/json' };
-    
-        try {
-            const getMeRes = await this.http(getMeUrl, headers, null, proxy);
-            let balance = getMeRes.data.balance;
-    
-            const res = await this.http(listMyCardsUrl, headers, null, proxy);
-            if (res.data && res.data.length > 0) {
-                let cards = res.data;
-                while (true) {
-                    let upgraded = false;
-                    for (const card of cards) {
-                        if (balance < card.upgrade_cost) {
-                            this.log(`Số dư không đủ để nâng cấp thẻ !`.red);
-                            return;
-                        }
-    
-                        if (balance >= card.upgrade_cost) {
-                            const upgradeData = JSON.stringify({ id: card.id });
-                            const upgradeRes = await this.http(upgradeUrl, headers, upgradeData, proxy);
-                            if (upgradeRes.data) {
-                                balance = upgradeRes.data.balance;
-                                cards = upgradeRes.data.my_cards;
-                                this.log(`Đang nâng cấp thẻ ${card.name.yellow}...Trạng thái: ${'Thành công'.green} Balance mới: ${String(balance).yellow}`);
-                                upgraded = true;
-                            } else {
-                                this.log(`Đang nâng cấp thẻ ${card.name.yellow}...Trạng thái: ${'Thất bại'.red}`);
-                            }
-                        }
-                    }
-                    if (!upgraded) break;
-                }
-            } else {
-                this.log('Không có thẻ nào cần nâng cấp.'.yellow);
-            }
-        } catch (error) {
-            this.log(`Lỗi khi nâng cấp thẻ: ${error.message}`.red);
+    async processAccounts() {
+        const input = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout
+        });
+
+        const accountsPath = path.join(__dirname, 'query.txt');
+        const proxyPath = path.join(__dirname, 'proxy.txt');
+        if (!fs.existsSync(accountsPath)) {
+            this.log('File accounts.txt does not exist!'.red);
+            input.close();
+            return;
         }
-    }     
-    
-    async sleep(ms) {
+
+        const accounts = fs.readFileSync(accountsPath, 'utf-8').split('\n').map(line => line.trim()).filter(line => line.length > 0);
+        const proxies = fs.readFileSync(proxyPath, 'utf-8').split('\n').map(line => line.trim()).filter(line => line.length > 0);
+
+        for (let i = 0; i < accounts.length; i++) {
+            const acc = accounts[i];
+            const proxyUrl = proxies[i % proxies.length]
+
+            const proxyIP = await this.checkProxyIP(proxyUrl);
+            this.log(`Proxy IP checked: ${proxyIP}`.cyan);
+            const loginResult = await this.dangnhap(acc, proxyUrl);
+            if (loginResult) {
+                const {access_token, energy} = loginResult;
+                await this.daily(access_token, proxyUrl);
+                const channels = await this.getTask(access_token, proxyUrl);
+                for (const channel of channels) {
+                    await this.claimTask(access_token, channel, proxyUrl);
+                }
+                await this.tapdc(access_token, energy, proxyUrl);
+                await this.buyCards(access_token, proxyUrl);
+            }
+            this.log(this.line);
+            await this.sleep(5000);
+        }
+        this.log('All accounts processed!'.green);
+    }
+
+    sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
-
-    askQuestion(query) {
-        const rl = readline.createInterface({
-            input: process.stdin,
-            output: process.stdout,
-        });
-        return new Promise(resolve => rl.question(query, ans => {
-            rl.close();
-            resolve(ans);
-        }))
-    }
-
-    async waitWithCountdown(seconds) {
-        for (let i = seconds; i >= 0; i--) {
-            readline.cursorTo(process.stdout, 0);
-            process.stdout.write(`===== Đã hoàn thành tất cả tài khoản, chờ ${i} giây để tiếp tục vòng lặp =====`);
-            await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-        console.log('');
-    }
-
-    async main() {
-        const dataFile = path.join(__dirname, 'data.txt');
-        const data = fs.readFileSync(dataFile, 'utf8')
-            .replace(/\r/g, '')
-            .split('\n')
-            .filter(Boolean);
-        
-        const proxyFile = path.join(__dirname, 'proxy.txt');
-        const proxyList = fs.readFileSync(proxyFile, 'utf8')
-            .replace(/\r/g, '')
-            .split('\n')
-            .filter(Boolean);
-    
-        if (data.length <= 0) {
-            this.log('No accounts added!'.red);
-            process.exit();
-        }
-        
-        if (proxyList.length <= 0) {
-            this.log('No proxies added!'.red);
-            process.exit();
-        }
-        
-        if (data.length !== proxyList.length) {
-            this.log('Số lượng tài khoản và proxy không khớp!'.red);
-            process.exit();
-        }
-        
-        this.log('Tool được chia sẻ tại kênh telegram Dân Cày Airdrop (@dancayairdrop)'.green);
-        console.log(this.line);
-    
-        const buyCards = await this.askQuestion('Bạn có muốn mua thẻ mới không? (y/n): ');
-        const buyCardsDecision = buyCards.toLowerCase() === 'y';
-    
-        const upgradeMyCards = await this.askQuestion('Bạn có muốn nâng cấp thẻ không? (y/n): ');
-        const upgradeMyCardsDecision = upgradeMyCards.toLowerCase() === 'y';
-    
-        while (true) {
-            const start = performance.now();
-    
-            for (const [index, tgData] of data.entries()) {
-                const proxy = proxyList[index];
-                const userData = JSON.parse(decodeURIComponent(tgData.split('&')[1].split('=')[1]));
-                const firstName = userData.first_name;
-                const ip = await this.checkProxyIP(proxy);
-                console.log(`========== Tài khoản ${index + 1}/${data.length} | ${firstName.green} | IP: ${ip} ==========`);
-    
-                const { balance, access_token, energy } = await this.dangnhap(tgData, proxy);
-                if (access_token) {
-                    await this.daily(access_token, proxy);
-    
-                    const availableChannels = await this.getTask(access_token, proxy);
-                    for (const channel of availableChannels) {
-                        await this.claimTask(access_token, channel, proxy);
-                    }
-    
-                    if (buyCardsDecision) {
-                        await this.buyCards(access_token, balance, proxy);
-                    }
-    
-                    if (upgradeMyCardsDecision) {
-                        await this.upgradeMyCards(access_token, balance, proxy);
-                    }
-                    
-                    await this.tapdc(access_token, energy, proxy);
-                }
-    
-                await this.sleep(5000);
-            }
-    
-            await this.waitWithCountdown(60);
-        }
-    }    
 }
 
-if (require.main === module) {
-    process.on('SIGINT', () => {
-        process.exit();
-    });
-    (new Pocketfi()).main().catch(error => {
-        console.error(error);
-        process.exit(1);
-    });
-}
+const bot = new BabyDoge();
+bot.processAccounts();
