@@ -1,5 +1,9 @@
 package request
 
+type ResearchAPIRequest struct {
+	ResearchType string `json:"researchType"`
+}
+
 type Response struct {
 	Ok    bool        `json:"ok"`
 	Error interface{} `json:"error"`

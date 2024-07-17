@@ -36,7 +36,7 @@ func main() {
 
 func process(query, proxy string, idx int) {
 	client := resty.New().SetProxy(proxy).SetHeader("Authorization", query)
-
+	lastUpgradeEgg := time.Now()
 	for {
 		var state request.Response
 		_, err := client.
@@ -46,6 +46,32 @@ func process(query, proxy string, idx int) {
 		if err != nil {
 			logger.Error("Get state error", zap.Any("idx", idx), zap.Error(err))
 			continue
+		}
+
+		if time.Now().Sub(lastUpgradeEgg) > time.Hour {
+			res, err := client.
+				R().
+				SetBody(request.ResearchAPIRequest{ResearchType: constant.ResearchTypeEggValue}).
+				SetResult(&state).
+				Post(constant.ResearchAPI)
+			if err != nil {
+				logger.Error("Try to upgrade egg value error", zap.Any("idx", idx), zap.Error(err))
+			} else {
+				logger.Info("Try to upgrade egg value : account ", zap.Any("idx", idx), zap.Any("state", res))
+
+			}
+
+			res, err = client.
+				R().
+				SetBody(request.ResearchAPIRequest{ResearchType: constant.ResearchTypeLayingRate}).
+				SetResult(&state).
+				Post(constant.ResearchAPI)
+			if err != nil {
+				logger.Error("Try to upgrade laying rate error", zap.Any("idx", idx), zap.Error(err))
+			} else {
+				logger.Info("Try to upgrade laying rate : account ", zap.Any("idx", idx), zap.Any("state", res))
+
+			}
 		}
 
 		if state.Data.RandomGift != nil {
@@ -58,8 +84,39 @@ func process(query, proxy string, idx int) {
 				logger.Error("claim gift error", zap.Any("idx", idx), zap.Error(err))
 				continue
 			}
-			logger.Info("Claim gift: account ", zap.Any("idx", idx), zap.Any("gift", state))
-			fmt.Println(res)
+			logger.Info("Claim gift: account ", zap.Any("idx", idx), zap.Any("gift", res))
+		}
+
+		if state.Data.Discovery.AvailableToUpgrade {
+			state.Data.Discovery.Level++
+			state.Data.Discovery.AvailableToUpgrade = false
+
+			res, err := client.
+				R().
+				SetBody(state).
+				SetResult(&state).
+				Post(constant.UpgradelevelAPI)
+			if err != nil {
+				logger.Error("claim gift error", zap.Any("idx", idx), zap.Error(err))
+				continue
+			}
+			logger.Info("Upgrade egg level: account ", zap.Any("idx", idx), zap.Any("egg", res))
+
+		}
+
+		if state.Data.FarmCapacity.NeedToUpgrade {
+
+			res, err := client.
+				R().
+				SetBody(request.ResearchAPIRequest{ResearchType: constant.ResearchTypeFarmCapacity}).
+				SetResult(&state).
+				Post(constant.ResearchAPI)
+			if err != nil {
+				logger.Error("Upgrade farm capacity error", zap.Any("idx", idx), zap.Error(err))
+				continue
+			}
+			logger.Info("Upgrade farm capacity : account ", zap.Any("idx", idx), zap.Any("state", res))
+
 		}
 
 		state.Data.Chickens.Quantity++
