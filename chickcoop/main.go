@@ -49,6 +49,7 @@ func process(query, proxy string, idx int) {
 		}
 
 		if time.Now().Sub(lastUpgradeEgg) > time.Hour {
+			lastUpgradeEgg = time.Now()
 			res, err := client.
 				R().
 				SetBody(request.ResearchAPIRequest{ResearchType: constant.ResearchTypeEggValue}).
@@ -121,7 +122,7 @@ func process(query, proxy string, idx int) {
 
 		state.Data.Chickens.Quantity++
 
-		_, err = client.
+		res, err := client.
 			R().
 			SetBody(state).
 			SetResult(&state).
@@ -133,7 +134,7 @@ func process(query, proxy string, idx int) {
 		if state.Ok {
 			logger.Info("Hatch account ", zap.Any("idx", idx), zap.Any("status", state.Ok))
 		} else {
-			logger.Error("Hatch account error", zap.Any("idx", idx), zap.Any("error", state))
+			logger.Error("Hatch account error", zap.Any("idx", idx), zap.Any("error", res))
 		}
 		time.Sleep(3 * time.Second)
 	}

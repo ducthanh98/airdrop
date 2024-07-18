@@ -8,4 +8,4 @@ tokens=[
 ]
 ```
 
-You can obtain a token by getting a bearer token from the web version of Telegram.
+Put query_id into tokens parameter
