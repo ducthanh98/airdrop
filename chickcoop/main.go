@@ -37,6 +37,8 @@ func main() {
 func process(query, proxy string, idx int) {
 	client := resty.New().SetProxy(proxy).SetHeader("Authorization", query)
 	lastUpgradeEgg := time.Now()
+	lastSpin := time.Now()
+	lastDailyCheckin := time.Now()
 	for {
 		var state request.Response
 		_, err := client.
@@ -73,6 +75,68 @@ func process(query, proxy string, idx int) {
 				logger.Info("Try to upgrade laying rate : account ", zap.Any("idx", idx), zap.Any("state", res))
 
 			}
+		}
+
+		// DAILY
+		if time.Now().Sub(lastDailyCheckin) > 12*time.Hour {
+			body := struct {
+				ID         string `json:"id"`
+				Name       string `json:"name"`
+				GemsReward int    `json:"gemsReward"`
+				Achieved   bool   `json:"achieved"`
+				Rewarded   bool   `json:"rewarded"`
+			}{
+				ID:         "daily.checkin",
+				Name:       "Check in game",
+				GemsReward: 5,
+				Achieved:   true,
+				Rewarded:   false,
+			}
+
+			lastUpgradeEgg = time.Now()
+			res, err := client.
+				R().
+				SetBody(body).
+				Post(constant.ClaimDailyAPI)
+			if err != nil {
+				logger.Error("Try to check in error", zap.Any("idx", idx), zap.Error(err))
+			} else {
+				logger.Info("Try to check in : account ", zap.Any("idx", idx), zap.Any("state", res))
+
+			}
+			lastDailyCheckin = time.Now()
+
+		}
+		// SPIN
+		if time.Now().Sub(lastSpin) > time.Hour {
+			var spinResult request.SpinResult
+			lastUpgradeEgg = time.Now()
+			res, err := client.
+				R().
+				SetBody(request.SpinRequest{Mode: constant.SpinModeFree}).
+				SetResult(&spinResult).
+				Post(constant.SpinAPI)
+			if err != nil {
+				logger.Error("Try to tak a spin error", zap.Any("idx", idx), zap.Error(err))
+			} else {
+				logger.Info("Try to take a spin : account ", zap.Any("idx", idx), zap.Any("state", res))
+
+			}
+
+			if spinResult.Ok {
+				res, err = client.
+					R().
+					SetBody(spinResult).
+					Post(constant.ClaimSpinAPI)
+				if err != nil {
+					logger.Error("Try to claim the spin result error", zap.Any("idx", idx), zap.Error(err))
+				} else {
+					logger.Info("Try to the spin result : account ", zap.Any("idx", idx), zap.Any("state", res))
+
+				}
+			}
+			lastSpin = time.Now()
+
 		}
 
 		if state.Data.RandomGift != nil {

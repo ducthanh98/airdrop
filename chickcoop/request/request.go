@@ -4,6 +4,32 @@ type ResearchAPIRequest struct {
 	ResearchType string `json:"researchType"`
 }
 
+type SpinRequest struct {
+	Mode string `json:"mode"`
+}
+
+type SpinResult struct {
+	Ok    bool        `json:"ok"`
+	Error interface{} `json:"error"`
+	Data  struct {
+		WheelState struct {
+			NextTimeFreeSpin       int64 `json:"nextTimeFreeSpin"`
+			IsAvailableFreeSpin    bool  `json:"isAvailableFreeSpin"`
+			AvailablePremiumSpin   int   `json:"availablePremiumSpin"`
+			NumberOfSpinsPurchased int   `json:"numberOfSpinsPurchased"`
+			AvailableReward        struct {
+				ID     string `json:"id"`
+				Text   string `json:"text"`
+				Type   string `json:"type"`
+				Amount int    `json:"amount"`
+			} `json:"availableReward"`
+			AvailableToBuyAirdropSpins int  `json:"availableToBuyAirdropSpins"`
+			IsAvailableWithdraw        bool `json:"isAvailableWithdraw"`
+			AccumulatedMoney           int  `json:"accumulatedMoney"`
+		} `json:"wheelState"`
+	} `json:"data"`
+}
+
 type Response struct {
 	Ok    bool        `json:"ok"`
 	Error interface{} `json:"error"`
