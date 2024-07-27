@@ -172,3 +172,15 @@ type Response struct {
 	} `json:"data"`
 	IsAcceptInvite bool `json:"isAcceptInvite"`
 }
+
+type ChallengeResponse struct {
+	Ok    bool        `json:"ok"`
+	Error interface{} `json:"error"`
+	Data  struct {
+		IsCheckin bool `json:"isCheckin"`
+		Challenge struct {
+			MainImage  string   `json:"mainImage"`
+			HintImages []string `json:"hintImages"`
+		} `json:"challenge"`
+	} `json:"data"`
+}

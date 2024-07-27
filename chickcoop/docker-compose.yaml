@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  chickcoop:
+    image: thanhld08/chickcoop
+    container_name: chickcoop
+    restart: always
+    volumes:
+      - /Users/thanhld/Desktop/18/airdrop/chickcoop/auto/conf.toml:/root/conf.toml
+    depends_on:
+      - captcha-solver
+  captcha-solver:
+    image: thanhld08/captcha-resolver
+    container_name: captcha-solver
+    restart: always

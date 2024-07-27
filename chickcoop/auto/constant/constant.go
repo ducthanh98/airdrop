@@ -10,6 +10,8 @@ const ResearchAPI = BASE_URL + "/laboratory/research"
 const SpinAPI = BASE_URL + "/v2/wheel/spin"
 const ClaimSpinAPI = BASE_URL + "/wheel/claim"
 const ClaimDailyAPI = BASE_URL + "/mission/task/claim"
+const GetChallenge = BASE_URL + "/user/challenge"
+const VerifyChallenge = BASE_URL + "/user/challenge/verify"
 
 const ResearchTypeFarmCapacity = "laboratory.regular.farmCapacity"
 const ResearchTypeEggValue = "laboratory.regular.eggValue"

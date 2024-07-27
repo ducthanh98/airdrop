@@ -39,6 +39,7 @@ func process(query, proxy string, idx int) {
 	lastUpgradeEgg := time.Now()
 	lastSpin := time.Now()
 	lastDailyCheckin := time.Now()
+	captchaURL := viper.GetString("captcha.server")
 	for {
 		var state request.Response
 		_, err := client.
@@ -199,6 +200,35 @@ func process(query, proxy string, idx int) {
 			logger.Info("Hatch account ", zap.Any("idx", idx), zap.Any("status", state.Ok))
 		} else {
 			logger.Error("Hatch account error", zap.Any("idx", idx), zap.Any("error", res))
+
+			// TRY TO VERIFY CAPTCHA
+			var challenge request.ChallengeResponse
+			_, err := client.
+				R().
+				SetResult(&challenge).
+				Get(constant.GetChallenge)
+			if err != nil {
+				logger.Error("Get challenge error", zap.Any("idx", idx), zap.Error(err))
+				continue
+			}
+			if challenge.Ok {
+				logger.Info("Bypass captcha - doing : ", zap.Any("idx", idx))
+				res, err = resty.New().
+					R().
+					SetBody(challenge.Data.Challenge).
+					SetResult(&challenge).
+					Post(captchaURL)
+				logger.Info("Detect captcha - result : ", zap.Any("idx", idx), zap.Any("res", res.String()))
+
+				res, err = client.
+					R().
+					SetBody(res.String()).
+					SetResult(&challenge).
+					Post(constant.VerifyChallenge)
+				logger.Info("Bypass captcha - result : ", zap.Any("idx", idx), zap.Any("res", res.String()))
+
+			}
+
 		}
 		time.Sleep(3 * time.Second)
 	}
