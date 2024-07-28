@@ -45,7 +45,7 @@ type Response struct {
 		} `json:"profile"`
 		StartTime int64 `json:"startTime"`
 		Chickens  struct {
-			Quantity   int `json:"quantity"`
+			Quantity   float64 `json:"quantity"`
 			LayingRate struct {
 				Base    float64 `json:"base"`
 				Bonus   string  `json:"bonus"`

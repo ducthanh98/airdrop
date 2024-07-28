@@ -50,7 +50,9 @@ func process(query, proxy string, idx int) {
 			logger.Error("Get state error", zap.Any("idx", idx), zap.Error(err))
 			continue
 		}
+		// UPGRADE EGG + AUO
 
+		//if time.Now().Sub(lastUpgradeEgg) > time.Hour {
 		if time.Now().Sub(lastUpgradeEgg) > time.Hour {
 			lastUpgradeEgg = time.Now()
 			res, err := client.
@@ -76,6 +78,21 @@ func process(query, proxy string, idx int) {
 				logger.Info("Try to upgrade laying rate : account ", zap.Any("idx", idx), zap.Any("state", res))
 
 			}
+			// AUTO HATCH
+
+			if !state.Data.Eggs.HatchingRate.IsAuto {
+				res, err = client.
+					R().
+					SetResult(&state).
+					Post(constant.AutoHatchAPI)
+				if err != nil {
+					logger.Error("Try to enable auto error", zap.Any("idx", idx), zap.Error(err))
+				} else {
+					logger.Info("Try to enable auto : account ", zap.Any("idx", idx), zap.Any("state", res))
+
+				}
+			}
+
 		}
 
 		// DAILY
@@ -108,7 +125,8 @@ func process(query, proxy string, idx int) {
 			lastDailyCheckin = time.Now()
 
 		}
-		// SPIN
+		// =========== SPIN ===============
+
 		if time.Now().Sub(lastSpin) > time.Hour {
 			var spinResult request.SpinResult
 			lastUpgradeEgg = time.Now()
@@ -139,6 +157,7 @@ func process(query, proxy string, idx int) {
 			lastSpin = time.Now()
 
 		}
+		// =========== random gift ===============
 
 		if state.Data.RandomGift != nil {
 			res, err := client.
@@ -153,6 +172,8 @@ func process(query, proxy string, idx int) {
 			logger.Info("Claim gift: account ", zap.Any("idx", idx), zap.Any("gift", res))
 		}
 
+		// =========== upgrade egg ===============
+
 		if state.Data.Discovery.AvailableToUpgrade {
 			state.Data.Discovery.Level++
 			state.Data.Discovery.AvailableToUpgrade = false
@@ -163,12 +184,13 @@ func process(query, proxy string, idx int) {
 				SetResult(&state).
 				Post(constant.UpgradelevelAPI)
 			if err != nil {
-				logger.Error("claim gift error", zap.Any("idx", idx), zap.Error(err))
+				logger.Error("Upgrade egg error", zap.Any("idx", idx), zap.Error(err))
 				continue
 			}
 			logger.Info("Upgrade egg level: account ", zap.Any("idx", idx), zap.Any("egg", res))
 
 		}
+		// =========== upgrade capacity ===============
 
 		if state.Data.FarmCapacity.NeedToUpgrade {
 
@@ -185,6 +207,7 @@ func process(query, proxy string, idx int) {
 
 		}
 
+		// =========== manual hatch ===============
 		state.Data.Chickens.Quantity++
 
 		res, err := client.
@@ -201,7 +224,7 @@ func process(query, proxy string, idx int) {
 		} else {
 			logger.Error("Hatch account error", zap.Any("idx", idx), zap.Any("error", res))
 
-			// TRY TO VERIFY CAPTCHA
+			//========== TRY TO VERIFY CAPTCHA =================
 			var challenge request.ChallengeResponse
 			_, err := client.
 				R().
@@ -226,6 +249,7 @@ func process(query, proxy string, idx int) {
 					SetResult(&challenge).
 					Post(constant.VerifyChallenge)
 				logger.Info("Bypass captcha - result : ", zap.Any("idx", idx), zap.Any("res", res.String()))
+				//========== TRY TO VERIFY CAPTCHA =================
 
 			}
 
