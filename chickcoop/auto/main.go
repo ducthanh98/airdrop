@@ -91,6 +91,17 @@ func process(query, proxy string, idx int) {
 					logger.Info("Try to enable auto : account ", zap.Any("idx", idx), zap.Any("state", res))
 
 				}
+			} else {
+				res, err := client.
+					R().
+					SetResult(&state).
+					Post(constant.AutoHatchAPI)
+				if err != nil {
+					logger.Error("Try to upgrade auto  hatch error", zap.Any("idx", idx), zap.Error(err))
+				} else {
+					logger.Info("Try to upgrade auto  hatch : account ", zap.Any("idx", idx), zap.Any("state", res))
+
+				}
 			}
 
 		}
