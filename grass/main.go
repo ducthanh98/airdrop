@@ -1,7 +1,8 @@
 package main
 
 import (
-	"crypto/tls"
+	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/go-resty/resty/v2"
@@ -11,11 +12,14 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"golang.org/x/net/proxy"
 	"grass/constant"
 	"grass/request"
 	"log"
+	"net"
 	"net/http"
-	"net/url"
+	"os"
+	"strings"
 	"time"
 )
 
@@ -34,40 +38,92 @@ func main() {
 
 	token := viper.GetString("data.token")
 	proxies := viper.GetStringSlice("data.proxies")
+	deviceIds := viper.GetStringSlice("data.deviceids")
 
-	for _, proxyURL := range proxies {
-		go pingNetworkDevice(token, proxyURL)
-		go connectSocket(token, proxyURL)
+	for i := 0; i < len(proxies); i++ {
+		//go pingNetworkDevice(token, proxies[i])
+		go connectSocket(token, proxies[i], deviceIds[i])
+		break
 	}
 
 	select {}
 
 }
 
-func connectSocket(token string, proxyURL string) {
-	tlsConfig := &tls.Config{
-		InsecureSkipVerify: true, // This skips SSL verification
-	}
-	proxy, _ := url.Parse(proxyURL)
+func connectSocket(token string, proxyURL string, deviceId string) {
+	// Proxy URL with authentication
+	proxyURL = "socks5://proxymart29244:zmpNhlFg@154.196.92.244:29244"
 
-	// Create a WebSocket dialer with the custom TLS configuration
-	dialer := websocket.Dialer{
-		TLSClientConfig: tlsConfig,
-		Proxy:           http.ProxyURL(proxy),
+	// WebSocket server address
+	wsServerAddress := constant.BASE_WSS // Change this to your WebSocket server address
+
+	// Manually parse the proxy URL
+	proxyParts := strings.Split(proxyURL, "@")
+	if len(proxyParts) != 2 {
+		fmt.Fprintln(os.Stderr, "Invalid proxy URL format")
+		return
 	}
-	c, resp, err := dialer.Dial(constant.BASE_WSS, nil)
+
+	authParts := strings.Split(strings.TrimPrefix(proxyParts[0], "socks5://"), ":")
+	if len(authParts) != 2 {
+		fmt.Fprintln(os.Stderr, "Invalid proxy authentication format")
+		return
+	}
+
+	proxyAuth := &proxy.Auth{
+		User:     authParts[0],
+		Password: authParts[1],
+	}
+
+	proxyAddress := proxyParts[1]
+
+	// Create a SOCKS5 dialer with authentication
+	dialer, err := proxy.SOCKS5("tcp", proxyAddress, proxyAuth, proxy.Direct)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Failed to create SOCKS5 dialer:", err)
+		return
+	}
+
+	// Create a custom HTTP client that uses the SOCKS5 dialer
+	httpTransport := &http.Transport{
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			return dialer.Dial(network, addr)
+		},
+	}
+
+	// Basic authentication credentials for WebSocket (not the proxy)
+	username := "your_username" // Change this to your username
+	password := "your_password" // Change this to your password
+
+	// Create the basic authentication header
+	authHeader := "Basic " + base64.StdEncoding.EncodeToString([]byte(username+":"+password))
+
+	// Prepare custom HTTP headers
+	headers := http.Header{}
+	headers.Set("Authorization", authHeader)
+
+	// Create the WebSocket dialer
+	wsDialer := websocket.Dialer{
+		NetDialContext: httpTransport.DialContext,
+	}
+
+	// Establish the WebSocket connection
+	c, resp, err := wsDialer.DialContext(context.Background(), wsServerAddress, headers)
 	if err != nil {
 		fmt.Printf("handshake failed with status", resp)
 		fmt.Printf("dial:", err)
+		log.Println(" Reconnecting after a minute")
+		time.Sleep(5 * time.Second)
+		go connectSocket(token, proxyURL, deviceId)
 	}
 	defer c.Close()
 	for {
 		_, payload, err := c.ReadMessage()
 		if err != nil {
 			log.Println("Read message error:", err)
-			time.Sleep(1 * time.Minute)
+			time.Sleep(5 * time.Second)
 			log.Println("Error. Reconnecting after a minute")
-			go connectSocket(token, proxyURL)
+			go connectSocket(token, proxyURL, deviceId)
 			return
 		}
 		var msg *request.WsMessage
@@ -112,8 +168,7 @@ func sendPing(c *websocket.Conn) {
 	}
 }
 
-func sendAuth(msg *request.WsMessage, token string, c *websocket.Conn) {
-	deviceId := viper.GetString("data.deviceId")
+func sendAuth(msg *request.WsMessage, deviceId string, c *websocket.Conn) {
 	userId := viper.GetString("data.userId")
 
 	//tmp := request.AuthRequest{
@@ -162,11 +217,11 @@ func pingNetworkDevice(token string, proxyUrl string) {
 			SetAuthToken(token).
 			Get(fmt.Sprintf("%v/data/client-ip", constant.BASE_URL))
 		if err != nil {
-			log.Println("Can't ping device")
+			log.Println(proxyUrl, "Can't ping device")
 		}
 
 		fmt.Println("res", res)
 
-		time.Sleep(3 * time.Second)
+		time.Sleep(10 * time.Second)
 	}
 }

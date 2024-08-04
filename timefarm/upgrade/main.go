@@ -28,19 +28,30 @@ func checkTask(queries, proxies []string) {
 
 		client := resty.New().SetProxy(proxy)
 
-		var authResponse request.AuthResponse
-		res, err := client.
-			SetProxy(proxy).
-			R().
-			SetBody(query).
-			SetResult(&authResponse).
-			Post(constant.AuthAPI)
-		if err != nil {
-			fmt.Println("Account idx:", i, "Get auth err: ", err)
-			continue
-		}
+		//var authResponse request.AuthResponse
+		//res, err := client.
+		//	SetProxy(proxy).
+		//	R().
+		//	SetBody(query).
+		//	SetResult(&authResponse).
+		//	Post(constant.AuthAPI)
+		//if err != nil {
+		//	fmt.Println("Account idx:", i, "Get auth err: ", err)
+		//	continue
+		//}
 
-		token := authResponse.Token
+		token := query
+		// Daily
+		res, err := client.
+			R().
+			SetAuthToken(token).
+			SetBody(request.DailyAnswer{Answer: "13/3/2024"}).
+			Post(constant.DailyQuestionAPI)
+		if err != nil {
+			fmt.Println("Account idx:", i, "Daily task err: ", err)
+		}
+		fmt.Println("Account idx:", i, "Daily res", res)
+		// Auto job
 		var tasks request.Task
 
 		res, err = client.

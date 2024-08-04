@@ -52,3 +52,7 @@ type ResultCommunity struct {
 	Version     string `json:"version"`
 	ExtensionID string `json:"extension_id"`
 }
+
+type DeviceParam struct {
+	DeviceId string `json:"deviceId"`
+}

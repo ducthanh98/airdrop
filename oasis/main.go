@@ -6,7 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
+	"github.com/mattn/go-colorable"
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"log"
 	"net"
 	"net/http"
@@ -21,7 +24,17 @@ var lock struct {
 	sync.Mutex // <-- this mutex protects
 }
 
+var logger *zap.Logger
+
 func main() {
+	config := zap.NewDevelopmentEncoderConfig()
+	config.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	logger = zap.New(zapcore.NewCore(
+		zapcore.NewConsoleEncoder(config),
+		zapcore.AddSync(colorable.NewColorableStdout()),
+		zapcore.DebugLevel,
+	))
+
 	viper.SetConfigFile("./conf.toml")
 	err := viper.ReadInConfig() // Find and read the config file
 	if err != nil {             // Handle errors reading the config file
@@ -34,7 +47,7 @@ func main() {
 	for _, proxyURL := range proxies {
 		//pingNetworkDevice(token, proxyURL)
 
-		connectSocket(token, proxyURL)
+		go connectSocket(token, proxyURL)
 	}
 
 	select {}
@@ -42,24 +55,6 @@ func main() {
 }
 
 func connectSocket(token string, proxyURL string) {
-	//client := resty.New()
-	//if proxyURL != "" {
-	//	client.SetProxy(proxyURL)
-	//}
-	//var authSessionResponse *request.AuthSessionResponse
-	//
-	//_, err := client.R().
-	//	SetResult(&authSessionResponse).
-	//	SetAuthToken(token).
-	//	Post(fmt.Sprintf("%v/auth/session", constant.BASE_URL))
-	//if err != nil {
-	//	fmt.Println("Auth session err", err)
-	//	log.Println(" Reconnecting after a minute")
-	//	time.Sleep(1 * time.Minute)
-	//	go connectSocket(token, proxyURL)
-	//	return
-	//}
-
 	var c *websocket.Conn
 
 	if proxyURL != "" {
@@ -75,8 +70,8 @@ func connectSocket(token string, proxyURL string) {
 
 		conn, err := net.Dial("tcp", proxy.Host)
 		if err != nil {
-			fmt.Println("Dial error", err)
-			log.Println(" Reconnecting after a minute")
+			logger.Info("Dial error", zap.Error(err))
+			logger.Info(" Reconnecting after a minute")
 			time.Sleep(1 * time.Minute)
 			go connectSocket(token, proxyURL)
 			return
@@ -99,8 +94,8 @@ func connectSocket(token string, proxyURL string) {
 
 		err = connectReq.Write(conn)
 		if err != nil {
-			fmt.Println("Write connect error", err)
-			log.Println(" Reconnecting after a minute")
+			logger.Info("Write connect error", zap.Error(err))
+			logger.Info(" Reconnecting after a minute")
 			time.Sleep(1 * time.Minute)
 			go connectSocket(token, proxyURL)
 			return
@@ -108,15 +103,15 @@ func connectSocket(token string, proxyURL string) {
 
 		resp, err := http.ReadResponse(bufio.NewReader(conn), connectReq)
 		if err != nil {
-			fmt.Println("Read response err", err)
-			log.Println(" Reconnecting after a minute")
+			logger.Info("Read response err", zap.Error(err))
+			logger.Info(" Reconnecting after a minute")
 			time.Sleep(1 * time.Minute)
 			go connectSocket(token, proxyURL)
 			return
 		}
 		if resp.StatusCode != http.StatusOK {
-			fmt.Println("Proxy CONNECT failed with status:", resp.Status)
-			log.Println(" Reconnecting after a minute")
+			logger.Info("Proxy CONNECT failed with status:", zap.Any("status", resp.Status))
+			logger.Info(" Reconnecting after a minute")
 			time.Sleep(1 * time.Minute)
 			go connectSocket(token, proxyURL)
 			return
@@ -126,8 +121,8 @@ func connectSocket(token string, proxyURL string) {
 		wsCon, resp, err := websocket.NewClient(conn, ws, nil, 1024, 1024)
 		if err != nil {
 			log.Printf("Init ws failed with status %d", resp.StatusCode)
-			log.Println("dial:", err)
-			log.Println(" Reconnecting after a minute")
+			logger.Info("dial:", zap.Error(err))
+			logger.Info(" Reconnecting after a minute")
 			time.Sleep(1 * time.Minute)
 			go connectSocket(token, proxyURL)
 			return
@@ -138,8 +133,8 @@ func connectSocket(token string, proxyURL string) {
 		wsCon, resp, err := websocket.DefaultDialer.Dial(sv, nil)
 		if err != nil {
 			log.Printf("Init ws failed with status %d", resp.StatusCode)
-			log.Println("dial:", err)
-			log.Println(" Reconnecting after a minute")
+			logger.Info("dial:", zap.Error(err))
+			logger.Info(" Reconnecting after a minute")
 			time.Sleep(1 * time.Minute)
 			go connectSocket(token, proxyURL)
 			return
@@ -175,7 +170,7 @@ func connectSocket(token string, proxyURL string) {
 	}()
 
 	<-errorChan
-	fmt.Println("Error. Retrying after a min")
+	logger.Info("Error. Retrying after a min")
 	time.Sleep(1 * time.Minute)
 	go connectSocket(token, proxyURL)
 }
@@ -200,7 +195,7 @@ func writeSocketMessage(c *websocket.Conn, msg interface{}) error {
 	lock.Lock()
 	defer lock.Unlock()
 	body, _ := json.Marshal(msg)
-	fmt.Println(string(body))
+	logger.Info(string(body))
 	err := c.WriteMessage(websocket.TextMessage, body)
 	return err
 }

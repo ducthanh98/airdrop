@@ -27,3 +27,7 @@ type ValidateInitRequest struct {
 	InitData string `json:"initData"`
 	Platform string `json:"platform"`
 }
+
+type DailyAnswer struct {
+	Answer interface{} `json:"answer"`
+}

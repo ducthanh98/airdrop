@@ -1,4 +1,5 @@
-Config file
+- Link:  https://t.me/quackquack_game_bot/myapp?startapp=1FfA9Nth5t
+-Config file
 ```
 [auth]
 tokens=[

@@ -18,9 +18,8 @@ func main() {
 	}
 
 	tokens := viper.GetStringSlice("auth.tokens")
-	proxies := viper.GetStringSlice("proxies.data")
-	for i, token := range tokens {
-		proxy := proxies[i%len(proxies)]
+	for _, token := range tokens {
+		proxy := ""
 		go collect(token, proxy)
 
 	}
@@ -28,7 +27,10 @@ func main() {
 }
 
 func collect(token, proxy string) {
-	client := resty.New().SetProxy(proxy)
+	client := resty.New()
+	if proxy == "" {
+		client = client.SetProxy(proxy)
+	}
 	for {
 		rand.Seed(time.Now().UnixNano())
 

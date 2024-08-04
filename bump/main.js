@@ -3,12 +3,12 @@ const fs = require('fs');
 const path = require('path');
 const { HttpsProxyAgent } = require('https-proxy-agent');
 
-const idsFilePath = path.join(__dirname, 'id.txt');
+const idsFilePath = path.join(__dirname, 'query.txt');
 const telegramIds = fs.readFileSync(idsFilePath, 'utf8').trim().split('\n');
 const proxyFilePath = path.join(__dirname, 'proxy.txt');
 const proxies = fs.readFileSync(proxyFilePath, 'utf8').trim().split('\n');
 
-const authUrl = 'https://api.mmbump.pro/v1/login';
+const authUrl = 'https://api.mmbump.pro/v1/loginJwt';
 const authHeaders = {
     'Accept': 'application/json, text/plain, */*',
     'Accept-Encoding': 'gzip, deflate, br, zstd',
@@ -32,12 +32,12 @@ const checkProxyIP = async (proxy) => {
             httpsAgent: proxyAgent
         });
         if (response.status === 200) {
-            console.log('\nThe IP address of the proxy is:', response.data.ip);
+            console.log('\nThe proxy IP address is:', response.data.ip);
         } else {
-            console.error('Unable to check the IP of the proxy. Status code:', response.status);
+            console.error('Unable to check the proxy IP. Status code:', response.status);
         }
     } catch (error) {
-        console.error('Error when checking the IP of the proxy:', error);
+        console.error('Error when checking the proxy IP:', error);
     }
 };
 
@@ -69,33 +69,36 @@ const finishFarmingIfNeeded = async (farmingData, farmingHeaders, proxyAgent) =>
             }
         } catch (error) {
             if (error.response) {
-                if (error.response.data.code === 431 && error.response.data.message === 'Cannot close session prematurely') {
-                    console.log('In farming state');
+                if (error.response.data.code === 431 && error.response.data.message === 'Нельзя закрыть сессию раньше времени') {
+                    console.log('Farming is in progress');
                 } else {
                     console.error('Response data:', JSON.stringify(error.response.data, null, 2));
                 }
+            } else {
+                console.error('Error:', error.message);
             }
         }
     } else {
-        console.log('In farming state');
+        console.log('Farming is in progress');
     }
 };
 
-const xuly = async (telegramId, proxy) => {
+const processRequest = async (telegramId, proxy) => {
     const proxyAgent = new HttpsProxyAgent(proxy);
     const authPayload = {
         "initData": telegramId
     };
 
     try {
+        console.log('Sending authentication request...');
         const authResponse = await axios.post(authUrl, authPayload, { headers: authHeaders, httpsAgent: proxyAgent });
         if (authResponse.status === 200) {
-            const hash = authResponse.data.token;
+            const hash = authResponse.data.access_token;
 
             const farmingUrl = 'https://api.mmbump.pro/v1/farming';
             const farmingHeaders = {
                 ...authHeaders,
-                'Authorization': hash
+                'Authorization': `Bearer ${hash}`,
             };
 
             let farmingData;
@@ -103,6 +106,7 @@ const xuly = async (telegramId, proxy) => {
             const maxAttempts = 5;
 
             while (attempts < maxAttempts) {
+                console.log(`Sending request to fetch farming data (Attempt ${attempts + 1})...`);
                 const farmingResponse = await axios.get(farmingUrl, { headers: farmingHeaders, httpsAgent: proxyAgent });
                 if (farmingResponse.status === 200) {
                     farmingData = farmingResponse.data;
@@ -111,14 +115,14 @@ const xuly = async (telegramId, proxy) => {
                     }
                 }
                 attempts++;
-                console.log(`Retry ${attempts} to fetch farming data...`);
+                console.log(`Retrying to fetch farming data (Attempt ${attempts})...`);
             }
 
             if (farmingData && farmingData.telegram_id !== undefined && farmingData.balance !== undefined) {
                 console.log('====================Airdrop Farmer====================');
                 console.log('ID:', farmingData.telegram_id);
                 console.log('Balance:', farmingData.balance);
-                console.log('===============================================');
+                console.log('=======================Finished========================');
                 const currentTime = Math.floor(Date.now() / 1000);
 
                 try {
@@ -143,7 +147,7 @@ const xuly = async (telegramId, proxy) => {
                     await axios.post(farmingStartUrl, farmingStartPayload, { headers: farmingHeaders, httpsAgent: proxyAgent });
                     console.log('Starting farming...');
                 } else if (farmingData.session.status === 'inProgress' && farmingData.session.moon_time > currentTime) {
-                    console.log('In farming state');
+                    console.log('Farming is in progress');
                 } else {
                     await finishFarmingIfNeeded(farmingData, farmingHeaders, proxyAgent);
                 }
@@ -151,10 +155,10 @@ const xuly = async (telegramId, proxy) => {
                 console.error('Unable to fetch valid farming data after multiple attempts');
             }
         } else {
-            throw new Error('Unable to authenticate');
+            throw new Error('Authentication failed');
         }
     } catch (error) {
-        console.error('An error occurred:', error);
+        console.error('Error occurred:', error);
     }
 };
 
@@ -168,7 +172,7 @@ const animatedLoading = (durationInMilliseconds) => {
             process.stdout.write(`\rWaiting for the next request ${frame} - Remaining ${remainingTime} seconds...`);
             if (Date.now() >= endTime) {
                 clearInterval(interval);
-                process.stdout.write("\rWaiting for the next request to complete.\n");
+                process.stdout.write("\rWaiting for the next request to be completed.\n");
                 resolve();
             }
         }, 250);
@@ -181,9 +185,9 @@ const main = async () => {
             const telegramId = telegramIds[i].trim();
             const proxy = proxies[i].trim();
             await checkProxyIP(proxy);
-            await xuly(telegramId, proxy);
+            await processRequest(telegramId, proxy);
         }
-        await animatedLoading(6 * 60 * 60 * 1000);
+        await animatedLoading(6 * 60 * 60 * 1000); // 6 hours
     }
 };
 

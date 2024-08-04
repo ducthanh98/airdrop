@@ -22,7 +22,7 @@ func main() {
 	for i, token := range tokens {
 		proxy := proxies[i%len(proxies)]
 		var duckApi = request.NewDuckApi(token.(string), proxy)
-		go hatchDuck(duckApi)
+		//go hatchDuck(duckApi)
 		go collectEgg(duckApi)
 		go collectGoldenDuck(duckApi)
 
@@ -41,15 +41,18 @@ func collectEgg(duckApi *request.DuckApi) {
 		nests := listRes.Data.Nest
 
 		for i := 0; i < len(nests); i++ {
-			nest := nests[i]
+			go func() {
+				nest := nests[i]
 
-			ducks := listRes.Data.Duck
-			randDuck := rand.Intn(len(ducks))
+				ducks := listRes.Data.Duck
+				randDuck := rand.Intn(len(ducks))
 
-			duckApi.LayEgg(nest.ID, ducks[randDuck].ID)
+				duckApi.LayEgg(nest.ID, ducks[randDuck].ID)
+				time.Sleep(10 * time.Millisecond)
 
-			res, _ := duckApi.CollectEgg(nest.ID)
-			log.Infoln("Collect Egg nestId", nest.ID, res)
+				res, _ := duckApi.CollectEgg(nest.ID)
+				log.Infoln("Collect Egg nestId", nest.ID, res)
+			}()
 			time.Sleep(100 * time.Millisecond)
 		}
 
