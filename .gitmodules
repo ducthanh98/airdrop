@@ -1,3 +1,6 @@
 [submodule "coin-hunter"]
 	path = coin-hunter
 	url = https://github.com/ducthanh98/coin-hunter
+[submodule "banana"]
+	path = banana
+	url = https://github.com/ducthanh98/banana
