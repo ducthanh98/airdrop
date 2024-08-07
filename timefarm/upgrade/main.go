@@ -42,19 +42,19 @@ func checkTask(queries, proxies []string) {
 
 		token := query
 		// Daily
-		res, err := client.
-			R().
-			SetAuthToken(token).
-			SetBody(request.DailyAnswer{Answer: "13/3/2024"}).
-			Post(constant.DailyQuestionAPI)
-		if err != nil {
-			fmt.Println("Account idx:", i, "Daily task err: ", err)
-		}
-		fmt.Println("Account idx:", i, "Daily res", res)
+		//res, err := client.
+		//	R().
+		//	SetAuthToken(token).
+		//	SetBody(request.DailyAnswer{Answer: "13/3/2024"}).
+		//	Post(constant.DailyQuestionAPI)
+		//if err != nil {
+		//	fmt.Println("Account idx:", i, "Daily task err: ", err)
+		//}
+		//fmt.Println("Account idx:", i, "Daily res", res)
 		// Auto job
 		var tasks request.Task
 
-		res, err = client.
+		res, err := client.
 			R().
 			SetAuthToken(token).
 			SetBody(`{}`).
