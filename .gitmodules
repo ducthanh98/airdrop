@@ -7,3 +7,6 @@
 [submodule "blockmesh"]
 	path = blockmesh
 	url = https://github.com/ducthanh98/blockmesh
+[submodule "dawn-validator"]
+	path = dawn-validator
+	url = https://github.com/ducthanh98/dawn-validator
