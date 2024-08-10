@@ -4,3 +4,6 @@
 [submodule "banana"]
 	path = banana
 	url = https://github.com/ducthanh98/banana
+[submodule "blockmesh"]
+	path = blockmesh
+	url = https://github.com/ducthanh98/blockmesh

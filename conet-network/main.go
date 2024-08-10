@@ -45,7 +45,7 @@ func mine(wallet, proxy, password string, idx int) {
 
 	parsedUrl, _ := url.Parse(proxy)
 	launcher := launcher.New().Bin(path).
-		Headless(true) // Ensure it's set to false for visible UI
+		Headless(false) // Ensure it's set to false for visible UI
 	if proxy != "" {
 		launcher = launcher.Proxy(fmt.Sprintf("http://%v", parsedUrl.Host))
 
