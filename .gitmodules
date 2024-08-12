@@ -16,3 +16,6 @@
 [submodule "musk-empire"]
 	path = musk-empire
 	url = https://github.com/ducthanh98/musk-empire
+[submodule "valiants"]
+	path = valiants
+	url = https://github.com/ducthanh98/valiants
