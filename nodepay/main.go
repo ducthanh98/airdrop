@@ -219,9 +219,22 @@ func pingNetworkDevice(token, proxyURL string) {
 	if proxyURL != "" {
 		client.SetProxy(proxyURL)
 	}
+	var authSessionResponse *request.AuthSessionResponse
+
+	res, err := client.R().
+		SetResult(&authSessionResponse).
+		SetAuthToken(token).
+		Post(fmt.Sprintf("%v/auth/session", constant.BASE_URL))
+	if err != nil {
+		fmt.Println("Proxy", proxyURL, "Authen err", err)
+		time.Sleep(1 * time.Minute)
+		go pingNetworkDevice(token, proxyURL)
+		return
+	}
+	fmt.Println("Proxy", proxyURL, "Authen res", res)
 
 	body := request.PingPostRequest{
-		ID:        "1245581001883648000",
+		ID:        authSessionResponse.Data.UID,
 		BrowserID: uuid.New().String(),
 		Timestamp: cast.ToInt(time.Now().Format("20060102150405")) / 1000,
 		Version:   "2.2.3",
