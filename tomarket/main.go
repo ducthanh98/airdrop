@@ -41,6 +41,7 @@ func main() {
 	proxies := viper.GetStringSlice("proxies.data")
 	farmId := viper.GetString("auth.farm_id")
 	gameId := viper.GetString("auth.game_id")
+	claimId := viper.GetString("auth.check_in")
 
 	isProxyMode := len(proxies) == 0
 	for i, token := range tokens {
@@ -48,13 +49,13 @@ func main() {
 		if isProxyMode {
 			proxy = proxies[i%len(proxies)]
 		}
-		go claim(token, proxy, farmId, gameId)
+		go claim(token, proxy, farmId, gameId, claimId)
 
 	}
 	select {}
 }
 
-func claim(query, proxy, farmId, gameId string) {
+func claim(query, proxy, farmId, gameId, checkinId string) {
 	client := resty.New()
 	if proxy != "" {
 		client.SetProxy(proxy)
@@ -84,6 +85,7 @@ func claim(query, proxy, farmId, gameId string) {
 		return
 	}
 	userId := user.ID
+	//lastClaimDaily := time.Now()
 
 	for {
 
@@ -115,6 +117,18 @@ func claim(query, proxy, farmId, gameId string) {
 			time.Sleep(5 * time.Minute)
 			continue
 		}
+
+		resp, err = client.R().
+			SetHeader("Authorization", token).
+			SetBody(request.ClaimRequest{GameID: checkinId}).
+			Post(constant.DailyClaimURL)
+		// Check for errors
+		if err != nil {
+			log.Errorln("Claim daily %v error : %v", userId, err)
+			time.Sleep(5 * time.Minute)
+			continue
+		}
+		log.Infoln("Claim daily ", userId, "res", resp)
 
 		if balanceResponse.Data.Farming != nil {
 			resp, err = client.R().
@@ -178,8 +192,8 @@ func claim(query, proxy, farmId, gameId string) {
 			rand.Seed(time.Now().UnixNano())
 
 			// Generate a random duration between 500 and 1000 milliseconds
-			min := 400
-			max := 550
+			min := 550
+			max := 650
 			points := rand.Intn(max-min+1) + min
 			resp, err = client.R().
 				SetHeader("Authorization", token).
