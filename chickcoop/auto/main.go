@@ -35,14 +35,29 @@ func main() {
 }
 
 func process(query, proxy string, idx int) {
-	client := resty.New().SetProxy(proxy).SetHeader("Authorization", query)
+	client := resty.New().SetProxy(proxy).
+		SetHeader("authorization", query).
+		SetHeader("accept", "*/*").
+		SetHeader("accept-language", "en-US,en;q=0.5").
+		SetHeader("origin", "https://game.chickcoop.io").
+		SetHeader("priority", "u=1, i").
+		SetHeader("referer", "https://game.chickcoop.io/").
+		SetHeader("sec-ch-ua", `"Not)A;Brand";v="99", "Brave";v="127", "Chromium";v="127"`).
+		SetHeader("sec-ch-ua-mobile", "?0").
+		SetHeader("sec-ch-ua-platform", `"macOS"`).
+		SetHeader("sec-fetch-dest", "empty").
+		SetHeader("sec-fetch-mode", "cors").
+		SetHeader("sec-fetch-site", "same-site").
+		SetHeader("sec-gpc", "1").
+		SetHeader("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36")
+
 	lastUpgradeEgg := time.Now()
 	lastSpin := time.Now()
 	lastDailyCheckin := time.Now()
 	captchaURL := viper.GetString("captcha.server")
 	for {
 		var state request.Response
-		_, err := client.
+		res, err := client.
 			R().
 			SetResult(&state).
 			Get(constant.GetStateAPI)
@@ -221,7 +236,7 @@ func process(query, proxy string, idx int) {
 		// =========== manual hatch ===============
 		state.Data.Chickens.Quantity++
 
-		res, err := client.
+		res, err = client.
 			R().
 			SetBody(state).
 			SetResult(&state).
