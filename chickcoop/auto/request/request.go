@@ -184,3 +184,75 @@ type ChallengeResponse struct {
 		} `json:"challenge"`
 	} `json:"data"`
 }
+
+type LandState struct {
+	Ok    bool `json:"ok"`
+	Error any  `json:"error"`
+	Data  struct {
+		Gem       int     `json:"gem"`
+		Cash      float64 `json:"cash"`
+		FarmValue float64 `json:"farmValue"`
+		Land      struct {
+			Normal []struct {
+				ID    string `json:"id"`
+				Plant *struct {
+					ID                      string `json:"id"`
+					Name                    string `json:"name"`
+					FarmValue               int    `json:"farmValue"`
+					UnlockLevel             int    `json:"unlockLevel"`
+					HarvestTime             string `json:"harvestTime"`
+					RemainingFertilizations int    `json:"remainingFertilizations"`
+					MaxFertilizations       int    `json:"maxFertilizations"`
+					Price                   struct {
+						Type  string `json:"type"`
+						Value int    `json:"value"`
+					} `json:"price"`
+					Stage     string `json:"stage"`
+					PlantedAt int64  `json:"plantedAt"`
+					HarvestAt int64  `json:"harvestAt"`
+				} `json:"plant"`
+				State       string `json:"state"`
+				UnlockLevel int    `json:"unlockLevel"`
+				Type        string `json:"type"`
+				Price       struct {
+					Type  string `json:"type"`
+					Value int    `json:"value"`
+				} `json:"price"`
+			} `json:"normal"`
+			Premium []struct {
+				ID    string `json:"id"`
+				Plant any    `json:"plant"`
+				State string `json:"state"`
+				Type  string `json:"type"`
+				Price struct {
+					Type  string `json:"type"`
+					Value int    `json:"value"`
+				} `json:"price"`
+			} `json:"premium"`
+			Warehouse struct {
+				Fertilizers []struct {
+					ID       string `json:"id"`
+					Quantity int    `json:"quantity"`
+				} `json:"fertilizers"`
+				Seeds []struct {
+					ID       string `json:"id"`
+					Quantity int    `json:"quantity"`
+				} `json:"seeds"`
+			} `json:"warehouse"`
+		} `json:"land"`
+	} `json:"data"`
+}
+
+type PurchaseSeedRequest struct {
+	PlantID  string `json:"plantId"`
+	Quantity int    `json:"quantity"`
+}
+
+type PutInRequest struct {
+	PlantID string `json:"plantId"`
+	TileID  string `json:"tileId"`
+}
+
+type WateringRequest struct {
+	TileID string `json:"tileId"`
+}

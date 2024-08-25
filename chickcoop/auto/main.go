@@ -56,6 +56,8 @@ func process(query, proxy string, idx int) {
 	lastDailyCheckin := time.Now()
 	captchaURL := viper.GetString("captcha.server")
 	for {
+
+		// ================ FARM ================
 		var state request.Response
 		res, err := client.
 			R().
@@ -66,6 +68,8 @@ func process(query, proxy string, idx int) {
 			continue
 		}
 		// UPGRADE EGG + AUO
+
+		// ZONE FARM
 
 		//if time.Now().Sub(lastUpgradeEgg) > time.Hour {
 		if time.Now().Sub(lastUpgradeEgg) > time.Hour {
@@ -281,6 +285,86 @@ func process(query, proxy string, idx int) {
 			}
 
 		}
+		// ================ END FARM ================
+		// ================ LAND ====================
+
+		var landState request.LandState
+		res, err = client.
+			R().
+			SetResult(&landState).
+			Get(constant.GetLandStateAPI)
+		if err != nil {
+			logger.Error("Get land state error", zap.Any("idx", idx), zap.Error(err))
+			continue
+		}
+
+		for _, s := range landState.Data.Land.Normal {
+			if s.State != "available" {
+				continue
+			}
+			wateringBody := request.WateringRequest{
+				TileID: s.ID,
+			}
+			if s.Plant != nil && time.Now().Unix() >= s.Plant.HarvestAt {
+				res, err = client.
+					R().
+					SetBody(wateringBody).
+					SetResult(&landState).
+					Post(constant.HarvestAPI)
+				if err != nil {
+					logger.Error("Get land state error", zap.Any("idx", idx), zap.Error(err))
+					continue
+				}
+			}
+
+			if s.Plant == nil {
+				body := request.PurchaseSeedRequest{
+					PlantID:  "flower.Daisy",
+					Quantity: 1,
+				}
+				res, err = client.
+					R().
+					SetBody(body).
+					SetResult(&landState).
+					Post(constant.PurchaseSeedsAPI)
+				if err != nil {
+					logger.Error("PurchaseSeedsAPI error", zap.Any("idx", idx), zap.Error(err))
+					continue
+				}
+				logger.Info("PurchaseSeedsAPI success", zap.Any("idx", idx), zap.Any("res", res))
+
+				putInBody := request.PutInRequest{
+					PlantID: "flower.Daisy",
+					TileID:  s.ID,
+				}
+				res, err = client.
+					R().
+					SetBody(putInBody).
+					SetResult(&landState).
+					Post(constant.PutInAPI)
+				if err != nil {
+					logger.Error("PutInAPI error", zap.Any("idx", idx), zap.Error(err))
+					continue
+				}
+				logger.Info("Putin success", zap.Any("idx", idx), zap.Any("res", res))
+
+				res, err = client.
+					R().
+					SetBody(wateringBody).
+					SetResult(&landState).
+					Post(constant.WateringAPI)
+				if err != nil {
+					logger.Error("WateringAPI error", zap.Any("idx", idx), zap.Error(err))
+					continue
+				}
+				logger.Info("Watering success", zap.Any("idx", idx), zap.Any("res", res))
+
+			}
+
+		}
+
+		// ================ END LAND ================
+
 		time.Sleep(3 * time.Second)
 	}
 }

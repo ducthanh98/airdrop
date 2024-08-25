@@ -19,3 +19,11 @@ const ResearchTypeFarmCapacity = "laboratory.regular.farmCapacity"
 const ResearchTypeEggValue = "laboratory.regular.eggValue"
 const SpinModeFree = "free"
 const ResearchTypeLayingRate = "laboratory.regular.layingRate"
+
+// LAND API
+
+const GetLandStateAPI = BASE_URL + "/land/state"
+const PurchaseSeedsAPI = BASE_URL + "/land/purchaseSeeds"
+const WateringAPI = BASE_URL + "/land/watering"
+const PutInAPI = BASE_URL + "/land/putIn"
+const HarvestAPI = BASE_URL + "/land/harvest"
