@@ -305,7 +305,8 @@ func process(query, proxy string, idx int) {
 			wateringBody := request.WateringRequest{
 				TileID: s.ID,
 			}
-			if s.Plant != nil && time.Now().Unix() >= s.Plant.HarvestAt {
+
+			if s.Plant != nil && time.Now().UnixMilli() >= s.Plant.HarvestAt {
 				res, err = client.
 					R().
 					SetBody(wateringBody).

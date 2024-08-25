@@ -19,3 +19,6 @@
 [submodule "valiants"]
 	path = valiants
 	url = https://github.com/ducthanh98/valiants
+[submodule "cowtopia"]
+	path = cowtopia
+	url = https://github.com/ducthanh98/cowtopia-claimer
