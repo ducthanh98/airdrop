@@ -41,18 +41,16 @@ func collectEgg(duckApi *request.DuckApi) {
 		nests := listRes.Data.Nest
 
 		for i := 0; i < len(nests); i++ {
-			go func() {
-				nest := nests[i]
+			nest := nests[i]
 
-				ducks := listRes.Data.Duck
-				randDuck := rand.Intn(len(ducks))
+			ducks := listRes.Data.Duck
+			randDuck := rand.Intn(len(ducks))
 
-				duckApi.LayEgg(nest.ID, ducks[randDuck].ID)
-				time.Sleep(100 * time.Millisecond)
+			duckApi.LayEgg(nest.ID, ducks[randDuck].ID)
+			time.Sleep(100 * time.Millisecond)
 
-				res, _ := duckApi.CollectEgg(nest.ID)
-				log.Infoln("Collect Egg nestId", nest.ID, res)
-			}()
+			res, _ := duckApi.CollectEgg(nest.ID)
+			log.Infoln("Collect Egg nestId", nest.ID, res)
 			time.Sleep(100 * time.Millisecond)
 		}
 		time.Sleep(500 * time.Millisecond)
