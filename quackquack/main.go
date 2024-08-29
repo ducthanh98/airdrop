@@ -24,9 +24,10 @@ func main() {
 		var duckApi = request.NewDuckApi(token.(string), proxy)
 		//go hatchDuck(duckApi)
 		go collectEgg(duckApi)
-		go collectGoldenDuck(duckApi)
 
 	}
+	go collectGoldenDuck(tokens, proxies)
+
 	select {}
 }
 
@@ -99,16 +100,22 @@ func hatchDuck(duckApi *request.DuckApi) {
 	}
 }
 
-func collectGoldenDuck(duckApi *request.DuckApi) {
+func collectGoldenDuck(tokens []interface{}, proxies []string) {
 
 	for {
 
-		resp, _ := duckApi.RewardGoldenDuck()
+		for i, token := range tokens {
+			proxy := proxies[i%len(proxies)]
+			var duckApi = request.NewDuckApi(token.(string), proxy)
 
-		resp, _ = duckApi.CollectGoldenDuck()
-		log.Infoln("Claim golden duck: ", resp)
+			resp, _ := duckApi.RewardGoldenDuck()
 
-		time.Sleep(60 * time.Second)
+			resp, _ = duckApi.CollectGoldenDuck()
+			log.Infoln("Claim golden duck: ", resp)
+
+		}
+
+		time.Sleep(2 * time.Minute)
 	}
 
 }
