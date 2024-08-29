@@ -48,13 +48,14 @@ func collectEgg(duckApi *request.DuckApi) {
 				randDuck := rand.Intn(len(ducks))
 
 				duckApi.LayEgg(nest.ID, ducks[randDuck].ID)
-				time.Sleep(10 * time.Millisecond)
+				time.Sleep(100 * time.Millisecond)
 
 				res, _ := duckApi.CollectEgg(nest.ID)
 				log.Infoln("Collect Egg nestId", nest.ID, res)
 			}()
 			time.Sleep(100 * time.Millisecond)
 		}
+		time.Sleep(500 * time.Millisecond)
 
 	}
 }
