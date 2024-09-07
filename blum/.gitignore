@@ -1,0 +1,6 @@
+*.toml
+.idea
+.DS_Store
+*.txt
+node_modules
+venv

@@ -1,17 +1,11 @@
-# Use the official Python image from the Docker Hub
-FROM python:3.12.3-alpine
+FROM node:20.10.0-alpine
 
-# Set the working directory in the container
 WORKDIR /app
 
-# Copy the requirements.txt file into the container at /app
-COPY requirements.txt /app/
+COPY package*.json ./
 
-# Install any needed packages specified in requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+RUN npm install
 
-# Copy the rest of the application code to /app
-COPY . /app
+COPY main.js .
 
-# Run the application
-CMD ["python", "app.py"]
+CMD [ "node", "main.js" ]
