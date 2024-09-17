@@ -256,3 +256,16 @@ type PutInRequest struct {
 type WateringRequest struct {
 	TileID string `json:"tileId"`
 }
+
+type NextLevelResponse struct {
+	Ok    bool `json:"ok"`
+	Error any  `json:"error"`
+	Data  struct {
+		Level       int     `json:"level"`
+		Name        string  `json:"name"`
+		Price       int     `json:"price"`
+		Color       string  `json:"color"`
+		Speed       float64 `json:"speed"`
+		Description string  `json:"description"`
+	} `json:"data"`
+}

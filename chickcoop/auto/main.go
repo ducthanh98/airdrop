@@ -5,6 +5,7 @@ import (
 	"chickcoop/request"
 	"fmt"
 	"github.com/go-resty/resty/v2"
+	"github.com/newrelic/go-agent/v3/newrelic"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -12,8 +13,10 @@ import (
 )
 
 var logger *zap.Logger
+var app *newrelic.Application
 
 func main() {
+
 	config := zap.NewDevelopmentConfig()
 	config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 	logger, _ = config.Build()
@@ -71,7 +74,6 @@ func process(query, proxy string, idx int) {
 
 		// ZONE FARM
 
-		//if time.Now().Sub(lastUpgradeEgg) > time.Hour {
 		if time.Now().Sub(lastUpgradeEgg) > time.Hour {
 			lastUpgradeEgg = time.Now()
 			res, err := client.
@@ -110,19 +112,34 @@ func process(query, proxy string, idx int) {
 					logger.Info("Try to enable auto : account ", zap.Any("idx", idx), zap.Any("state", res))
 
 				}
+			} else {
+				var nextLevelResponse request.NextLevelResponse
+
+				res, err := client.
+					R().
+					SetResult(&nextLevelResponse).
+					Get(constant.UpgradeNextLevelAutoHatch)
+				if err != nil {
+					logger.Error("Get cost to upgrade auto  hatch error", zap.Any("idx", idx), zap.Error(err))
+				} else {
+					logger.Info("Get cost to upgrade  auto  hatch : account ", zap.Any("idx", idx), zap.Any("state", res))
+
+					if nextLevelResponse.Ok && state.Data.Gem >= nextLevelResponse.Data.Price {
+						res, err := client.
+							R().
+							SetResult(&state).
+							Post(constant.UpgradeAutoHatch)
+						if err != nil {
+							logger.Error("Try to upgrade auto  hatch error", zap.Any("idx", idx), zap.Error(err))
+						} else {
+							logger.Info("Try to upgrade auto  hatch : account ", zap.Any("idx", idx), zap.Any("state", res))
+
+						}
+					}
+
+				}
+
 			}
-			//else {
-			//	res, err := client.
-			//		R().
-			//		SetResult(&state).
-			//		Post(constant.AutoHatchAPI)
-			//	if err != nil {
-			//		logger.Error("Try to upgrade auto  hatch error", zap.Any("idx", idx), zap.Error(err))
-			//	} else {
-			//		logger.Info("Try to upgrade auto  hatch : account ", zap.Any("idx", idx), zap.Any("state", res))
-			//
-			//	}
-			//}
 
 		}
 
@@ -239,6 +256,7 @@ func process(query, proxy string, idx int) {
 		}
 
 		// =========== manual hatch ===============
+		hatchTxn := app.StartTransaction("hatch-egg")
 		state.Data.Chickens.Quantity++
 
 		res, err = client.
@@ -247,6 +265,7 @@ func process(query, proxy string, idx int) {
 			SetResult(&state).
 			Post(constant.HatchAPI)
 		if err != nil {
+			hatchTxn.NoticeError(err)
 			logger.Error("Hatch error", zap.Any("idx", idx), zap.Error(err))
 			continue
 		}
@@ -254,6 +273,7 @@ func process(query, proxy string, idx int) {
 			logger.Info("Hatch account ", zap.Any("idx", idx), zap.Any("status", state.Ok))
 		} else {
 			logger.Error("Hatch account error", zap.Any("idx", idx), zap.Any("error", res))
+			captchaTxn := app.StartTransaction("verify-captcha")
 
 			//========== TRY TO VERIFY CAPTCHA =================
 			var challenge request.ChallengeResponse
@@ -262,6 +282,7 @@ func process(query, proxy string, idx int) {
 				SetResult(&challenge).
 				Get(constant.GetChallenge)
 			if err != nil {
+				captchaTxn.NoticeError(err)
 				logger.Error("Get challenge error", zap.Any("idx", idx), zap.Error(err))
 				continue
 			}
@@ -281,10 +302,12 @@ func process(query, proxy string, idx int) {
 					Post(constant.VerifyChallenge)
 				logger.Info("Bypass captcha - result : ", zap.Any("idx", idx), zap.Any("res", res.String()))
 				//========== TRY TO VERIFY CAPTCHA =================
-
 			}
+			captchaTxn.End()
 
 		}
+		hatchTxn.End()
+
 		// ================ END FARM ================
 		// ================ LAND ====================
 
