@@ -109,7 +109,7 @@ func claim(query, proxy, farmId, gameId, checkinId string) {
 		resp, err = client.R().
 			SetHeader("Authorization", token).
 			SetResult(&balanceResponse).
-			Get(constant.GetBalanceURL)
+			Post(constant.GetBalanceURL)
 		// Check for errors
 		if err != nil {
 			log.Errorln("Get balance error: %v : %v", userId, err)
@@ -171,18 +171,19 @@ func claim(query, proxy, farmId, gameId, checkinId string) {
 		if balanceResponse.Data.PlayPasses > 0 {
 			// Start game
 			var playGameResponse request.PlayGameResponse
-			_, err := client.R().
+			res, err := client.R().
 				SetHeader("Authorization", token).
 				SetBody(request.ClaimRequest{GameID: gameId}).
 				SetResult(&playGameResponse).
 				Post(constant.PlayGameURL)
+			log.Infoln("Start game userId res", userId, " : ", res)
+
 			// Check for errors
 			if err != nil {
 				log.Errorln("Play game %v error: %v", userId, err)
 				time.Sleep(5 * time.Minute)
 				continue
 			}
-			log.Infoln("Start game userId ", userId, " : ", resp)
 
 			duration := playGameResponse.Data.EndAt - playGameResponse.Data.StartAt
 			log.Infoln("UserId ", userId, " Wait ", time.Duration(duration)*time.Second, "seconds for finishing stupid game")
