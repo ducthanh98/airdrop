@@ -6,6 +6,6 @@ COPY package*.json ./
 
 RUN npm install
 
-COPY main.js .
+COPY . .
 
 CMD [ "node", "main.js" ]
