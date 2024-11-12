@@ -153,7 +153,7 @@ class GameBot {
         const data = JSON.stringify({ game: 'example_game' });
         try {
             await this.randomDelay();
-            const response = await this.makeRequest('post', 'https://game-domain.blum.codes/api/v1/game/play', data, true);
+            const response = await this.makeRequest('post', 'https://game-domain.blum.codes/api/v2/game/play', data, true);
             this.currentGameId = response.gameId;
             return response;
         } catch (error) {
@@ -170,7 +170,7 @@ class GameBot {
         const data = JSON.stringify({ gameId: this.currentGameId, points: points });
         try {
             await this.randomDelay();
-            const response = await this.makeRequest('post', 'https://game-domain.blum.codes/api/v1/game/claim', data, true);
+            const response = await this.makeRequest('post', 'https://game-domain.blum.codes/api/v2/game/claim', data, true);
             return response;
         } catch (error) {
             await this.log(`Không thể nhận phần thưởng game: ${error.message}`, 'error');
