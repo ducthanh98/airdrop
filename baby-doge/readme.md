@@ -1,2 +1,0 @@
-- Put list of query_id into query.txt file
-- Link Bot: https://t.me/BabyDogePAWS_Bot?start=r_1939627995
